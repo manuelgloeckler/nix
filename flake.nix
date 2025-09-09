@@ -49,7 +49,7 @@
 
       nixpkgs.config.allowBroken = true;
 
-      
+
       homebrew = {
         enable = true;
 
@@ -63,6 +63,8 @@
 	   "zoom"
 	   "inkscape"
 	   "karabiner-elements"
+	   "font-jetbrains-mono"
+           "font-jetbrains-mono-nerd-font"
         ];
 
         # Uncomment to install app store apps using mas-cli.
@@ -129,7 +131,9 @@
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
 
-	  home-manager.backupFileExtension = "backup"; 
+          	
+	  home-manager.backupFileExtension = "hm-backup"; 
+
 	  # Your HM config for user manug goes here:
           home-manager.users."manug" = { pkgs, lib, config, ... }: {
               # Required on macOS:
@@ -142,6 +146,7 @@
 	      xdg.configFile."karabiner/karabiner.json".source = ./dotfiles/karabiner/karabiner.json;
 	      home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
 	      xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
+	      xdg.configFile."ghostty/themes".source = ./dotfiles/ghostty/themes;
           };
 
           nix-homebrew = {

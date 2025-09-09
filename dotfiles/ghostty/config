@@ -1,41 +1,51 @@
-# --- Shell & look -------------------------------------------------------------
-shell-integration = zsh
-font-family = JetBrains Mono
-theme = Dracula
-mouse-hide-while-typing = true
+# --- Look & feel --------------------------------------------------------------
+# If this errors, change to: shell-integration = true
+shell-integration = true
+
+font-family = JetBrainsMono Nerd Font
+font-size = 13
+line-height = 1.05
+window-padding-x = 10
+window-padding-y = 10
 scrollback-limit = 1000000
+copy-on-select = true
+mouse-hide-while-typing = true
+macos-option-as-alt = both
 
-# Optional polish:
-# font-size = 13
-# line-height = 1.05
-# window-padding-x = 8
-# window-padding-y = 8
-# copy-on-select = true
-# macos-option-as-alt = both
+# Theme name must exactly match a file in ~/.config/ghostty/themes/
+theme = Catppuccin Mocha
 
-# --- Tabs, splits, and tmux-ish navigation -----------------------------------
-# New window / reload
+# Subtle transparency & blur (macOS)
+background-opacity = 0.92
+window-background-blur = 18   # <- prefer this key; remove background-blur-radius
+
+# Cursor style; remove underline-style (not supported)
+cursor-style = beam
+
+# Fullscreen vs transparency don't mix on macOS; prefer maximize to keep opacity
+maximize = true
+
+# --- Tabs, splits, tmux-ish navigation ---------------------------------------
 keybind = ctrl+n=new_window
-keybind = super+r=reload_config           # super = Command (⌘) on macOS
+keybind = super+r=reload_config
 
-# Navigate splits (hjkl)
 keybind = ctrl+h=goto_split:left
 keybind = ctrl+j=goto_split:bottom
 keybind = ctrl+k=goto_split:top
 keybind = ctrl+l=goto_split:right
 
-# Create splits with a "prefix" (Ctrl+a then key)
 keybind = ctrl+a>h=new_split:left
 keybind = ctrl+a>j=new_split:down
 keybind = ctrl+a>k=new_split:up
 keybind = ctrl+a>l=new_split:right
 keybind = ctrl+a>f=toggle_split_zoom
 
-# Tab navigation with the same prefix
 keybind = ctrl+a>n=next_tab
 keybind = ctrl+a>p=previous_tab
+keybind = ctrl+a>c=new_tab
 
-# Always restore window/tab/split layout on restart
+keybind = ctrl+a>x=close_split
+keybind = ctrl+a>t=close_tab
+
 window-save-state = always
-
 
