@@ -38,3 +38,4 @@ keybind = ctrl+a>p=previous_tab
 # Always restore window/tab/split layout on restart
 window-save-state = always
 
+
