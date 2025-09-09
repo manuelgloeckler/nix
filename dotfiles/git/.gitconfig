@@ -1,0 +1,45 @@
+[user]
+    name = manuelgloeckler
+
+[core]
+    editor = nvim
+    pager = delta          # or "less -FRSX"
+    autocrlf = input       # safe for macOS/Linux
+    excludesfile = ~/.gitignore_global
+
+[color]
+    ui = auto
+
+[alias]
+    st = status -sb
+    co = checkout
+    br = branch -vv
+    cm = commit -m
+    ca = commit -a --amend
+    lg = log --oneline --graph --decorate --all
+    df = diff --color-words
+    pl = pull --rebase
+    ps = push
+
+[pull]
+    rebase = true
+
+[merge]
+    tool = vimdiff
+
+[push]
+    default = current
+
+[init]
+    defaultBranch = main
+
+[delta]
+    features = side-by-side line-numbers decorations
+    syntax-theme = Monokai Extended
+
+[interactive]
+    diffFilter = delta --color-only
+
+[credential]
+    helper = osxkeychain
+

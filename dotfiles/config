@@ -1,0 +1,40 @@
+# --- Shell & look -------------------------------------------------------------
+shell-integration = zsh
+font-family = JetBrains Mono
+theme = Dracula
+mouse-hide-while-typing = true
+scrollback-limit = 1000000
+
+# Optional polish:
+# font-size = 13
+# line-height = 1.05
+# window-padding-x = 8
+# window-padding-y = 8
+# copy-on-select = true
+# macos-option-as-alt = both
+
+# --- Tabs, splits, and tmux-ish navigation -----------------------------------
+# New window / reload
+keybind = ctrl+n=new_window
+keybind = super+r=reload_config           # super = Command (⌘) on macOS
+
+# Navigate splits (hjkl)
+keybind = ctrl+h=goto_split:left
+keybind = ctrl+j=goto_split:bottom
+keybind = ctrl+k=goto_split:top
+keybind = ctrl+l=goto_split:right
+
+# Create splits with a "prefix" (Ctrl+a then key)
+keybind = ctrl+a>h=new_split:left
+keybind = ctrl+a>j=new_split:down
+keybind = ctrl+a>k=new_split:up
+keybind = ctrl+a>l=new_split:right
+keybind = ctrl+a>f=toggle_split_zoom
+
+# Tab navigation with the same prefix
+keybind = ctrl+a>n=next_tab
+keybind = ctrl+a>p=previous_tab
+
+# Always restore window/tab/split layout on restart
+window-save-state = always
+
