@@ -1,24 +1,34 @@
 {
-"GLOBAL": { "SHOW_IN_MENU_BAR": FALSE, "SHOW_PROFILE_NAME_IN_MENU_BAR": FALSE },
-"PROFILES": [{
-  "NAME": "dEFAULT",
-  "SELECTED": TRUE,
-  "COMPLEX_MODIFICATIONS": {
-    "PARAMETERS": {
-      "BASIC.TO_IF_ALONE_TIMEOUT_MILLISECONDS": 250,
-      "BASIC.TO_IF_HELD_DOWN_THRESHOLD_MILLISECONDS": 250
-    },
-    "RULES": [{
-      "DESCRIPTION": "cAPS lOCK → eSC (TAP), cTRL (HOLD)",
-      "MANIPULATORS": [{
-	"TYPE": "BASIC",
-	"FROM": { "KEY_CODE": "CAPS_LOCK", "MODIFIERS": { "OPTIONAL": [ "ANY" ] } },
-	"TO": [ { "KEY_CODE": "LEFT_CONTROL" } ],
-	"TO_IF_ALONE": [ { "KEY_CODE": "ESCAPE" } ]
-      }]
-    }]
+  "global": {
+    "show_in_menu_bar": false,
+    "show_profile_name_in_menu_bar": false
   },
-  "SIMPLE_MODIFICATIONS": [],
-  "DEVICES": []
-}]
+  "profiles": [
+    {
+      "name": "Default",
+      "selected": true,
+      "complex_modifications": {
+        "parameters": {
+          "basic.to_if_alone_timeout_milliseconds": 250,
+          "basic.to_if_held_down_threshold_milliseconds": 250
+        },
+        "rules": [
+          {
+            "description": "Caps Lock → Esc (tap) / Ctrl (hold)",
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": { "key_code": "caps_lock", "modifiers": { "optional": [ "any" ] } },
+                "to_if_alone":   [ { "key_code": "escape" } ],
+                "to_if_held_down": [ { "key_code": "left_control" } ]
+              }
+            ]
+          }
+        ]
+      },
+      "simple_modifications": [],
+      "devices": []
+    }
+  ]
 }
+

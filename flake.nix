@@ -45,6 +45,7 @@
 	pkgs.ghostty-bin
 	pkgs.neofetch
 	pkgs.uv
+	pkgs.nodejs_22
       ];
 
       nixpkgs.config.allowBroken = true;
@@ -63,6 +64,7 @@
 	   "zoom"
 	   "inkscape"
 	   "karabiner-elements"
+	   "unnaturalscrollwheels"
 	   "font-jetbrains-mono"
            "font-jetbrains-mono-nerd-font"
         ];
@@ -110,6 +112,9 @@
         dock.magnification = false;
         dock.mineffect = "genie";
         finder.FXPreferredViewStyle = "clmv";
+	finder.AppleShowAllFiles = true;
+        finder.ShowPathbar = true;  # optional
+        finder.ShowStatusBar = true; # optional
         loginwindow.GuestEnabled  = false;
         NSGlobalDomain.AppleInterfaceStyle = "Dark";
         NSGlobalDomain.KeyRepeat = 2;
@@ -147,6 +152,20 @@
 	      home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
 	      xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
 	      xdg.configFile."ghostty/themes".source = ./dotfiles/ghostty/themes;
+
+
+	      programs.zsh = {
+                   enable = true;
+                 
+                   # Keep your existing configs, and append this snippet
+                   initExtra = ''
+                     # Show system info at shell start
+                     if command -v neofetch >/dev/null 2>&1; then
+                       neofetch
+                     fi
+                   '';
+                 };
+
           };
 
           nix-homebrew = {

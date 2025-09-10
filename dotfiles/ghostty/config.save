@@ -4,28 +4,30 @@ shell-integration = zsh
 
 font-family = JetBrainsMono Nerd Font
 font-size = 13
-#line-height = 1.05
-window-padding-x = 1
-window-padding-y = 1
+line-height = 1.05
+window-padding-x = 10
+window-padding-y = 10
 scrollback-limit = 1000000
 copy-on-select = true
+mouse-hide-while-typing = true
+macos-option-as-alt = both
 
 # Theme name must exactly match a file in ~/.config/ghostty/themes/
-theme = catppuccin-mocha 
+theme = Catppuccin Mocha
 
 # Subtle transparency & blur (macOS)
 background-opacity = 0.92
-#window-background-blur = 18   # <- prefer this key; remove background-blur-radius
+window-background-blur = 18   # <- prefer this key; remove background-blur-radius
 
 # Cursor style; remove underline-style (not supported)
-#cursor-style = beam
+cursor-style = beam
 
 # Fullscreen vs transparency don't mix on macOS; prefer maximize to keep opacity
 maximize = true
 
 # --- Tabs, splits, tmux-ish navigation ---------------------------------------
-
 keybind = ctrl+n=new_window
+keybind = super+r=reload_config
 
 keybind = ctrl+h=goto_split:left
 keybind = ctrl+j=goto_split:bottom
@@ -40,7 +42,10 @@ keybind = ctrl+a>f=toggle_split_zoom
 
 keybind = ctrl+a>n=next_tab
 keybind = ctrl+a>p=previous_tab
+keybind = ctrl+a>c=new_tab
 
-keybind = super+r=reload_config
+keybind = ctrl+a>x=close_split
+keybind = ctrl+a>t=close_tab
 
 window-save-state = always
+
