@@ -76,7 +76,7 @@
            "font-jetbrains-mono"
            "font-jetbrains-mono-nerd-font"
            # Tiling window manager for macOS
-           "aerospace"
+           "nikitabobko/tap/aerospace"
         ];
 
         # Uncomment to install app store apps using mas-cli.
@@ -131,6 +131,17 @@
 	NSGlobalDomain.ApplePressAndHoldEnabled = false;
 	NSGlobalDomain.InitialKeyRepeat=15;
     	NSGlobalDomain."com.apple.keyboard.fnState" = true;
+      };
+
+      # Launch Aerospace at login (user LaunchAgent)
+      launchd.user.agents.aerospace = {
+        enable = true;
+        config = {
+          Label = "dev.aerospace";
+          ProgramArguments = [ "/usr/bin/open" "-a" "AeroSpace" ];
+          RunAtLoad = true;
+          KeepAlive = true;
+        };
       };
     };
   in

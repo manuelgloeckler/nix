@@ -20,3 +20,5 @@ alt-ctrl-k = "resize height +50"
 
 alt-f = "fullscreen toggle"
 
+# Reload AeroSpace configuration
+alt-r = "reload-config"
