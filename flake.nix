@@ -136,8 +136,7 @@
       # Launch Aerospace at login (user LaunchAgent)
       launchd.user.agents.aerospace = {
         enable = true;
-        config = {
-          Label = "dev.aerospace";
+        serviceConfig = {
           ProgramArguments = [ "/usr/bin/open" "-a" "AeroSpace" ];
           RunAtLoad = true;
           KeepAlive = true;
