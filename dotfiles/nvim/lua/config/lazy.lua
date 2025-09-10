@@ -1,3 +1,14 @@
+-- Load health shim early so plugin health checks don't crash on 0.10+
+pcall(require, "config.health_shim")
+
+-- Ensure Python provider (venv) is configured before plugins load
+pcall(function()
+  local py = require("config.python")
+  py.ensure_venv()
+  py.configure_provider()
+  py.prepend_venv_bin_to_path()
+end)
+
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
   local lazyrepo = "https://github.com/folke/lazy.nvim.git"
@@ -21,6 +32,8 @@ require("lazy").setup({
     -- import/override with your plugins
     { import = "plugins" },
   },
+  -- Write lockfile to data dir instead of config dir (read-only under Home Manager)
+  lockfile = vim.fn.stdpath("data") .. "/lazy-lock.json",
   defaults = {
     -- By default, only LazyVim plugins will be lazy-loaded. Your custom plugins will load during startup.
     -- If you know what you're doing, you can set this to `true` to have all your custom plugins lazy-loaded by default.

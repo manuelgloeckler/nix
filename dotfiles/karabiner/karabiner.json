@@ -27,8 +27,22 @@
         ]
       },
       "simple_modifications": [],
-      "devices": []
+      "devices": [
+        {
+          "identifiers": {
+            "is_keyboard": true,
+            "is_pointing_device": false,
+            "vendor_id": 1452
+          },
+          "ignore": false,
+          "manipulate_caps_lock_led": false,
+          "keyboard_type": "ansi"
+        }
+      ],
+      "virtual_hid_keyboard": {
+        "country_code": 33,
+        "keyboard_type": "ansi"
+      }
     }
   ]
 }
-

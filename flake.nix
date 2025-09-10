@@ -27,9 +27,14 @@
       url = "github:homebrew/homebrew-services";
       flake = false;
     };
+    # Aerospace Homebrew tap for installing the app via cask
+    aerospace-tap = {
+      url = "github:nikitabobko/homebrew-tap";
+      flake = false;
+    };
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, mac-app-util, home-manager, nix-homebrew, homebrew-core, homebrew-cask, homebrew-bundle, homebrew-services, ... }:
+  outputs = inputs@{ self, nix-darwin, nixpkgs, mac-app-util, home-manager, nix-homebrew, homebrew-core, homebrew-cask, homebrew-bundle, homebrew-services, aerospace-tap, ... }:
   let
     configuration = { pkgs, ... }: {
       nixpkgs.config.allowUnfree = true;
@@ -47,6 +52,8 @@
 	pkgs.uv
 	pkgs.nodejs_22
     pkgs.python3
+    pkgs.python3Packages.jupytext
+    pkgs.fd
       ];
 
       nixpkgs.config.allowBroken = true;
@@ -62,12 +69,14 @@
 
         # Uncomment to install cask packages from Homebrew.
         casks = [
-	   "zoom"
-	   "inkscape"
-	   "karabiner-elements"
-	   "unnaturalscrollwheels"
-	   "font-jetbrains-mono"
+           "zoom"
+           "inkscape"
+           "karabiner-elements"
+           "unnaturalscrollwheels"
+           "font-jetbrains-mono"
            "font-jetbrains-mono-nerd-font"
+           # Tiling window manager for macOS
+           "aerospace"
         ];
 
         # Uncomment to install app store apps using mas-cli.
@@ -121,7 +130,7 @@
         NSGlobalDomain.KeyRepeat = 2;
 	NSGlobalDomain.ApplePressAndHoldEnabled = false;
 	NSGlobalDomain.InitialKeyRepeat=15;
-	NSGlobalDomain."com.apple.keyboard.fnState" = false;
+    	NSGlobalDomain."com.apple.keyboard.fnState" = true;
       };
     };
   in
@@ -152,12 +161,15 @@
 
 
               # Example: write Karabiner config declaratively
-	      xdg.configFile."karabiner/karabiner.json".source = ./dotfiles/karabiner/karabiner.json;
-	      xdg.configFile."karabiner/karabiner.json".force = true;
-	      home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
-	      xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
-	      xdg.configFile."ghostty/themes".source = ./dotfiles/ghostty/themes;
-	      xdg.configFile."nvim".source = ./dotfiles/nvim;
+              xdg.configFile."karabiner/karabiner.json".source = ./dotfiles/karabiner/karabiner.json;
+              xdg.configFile."karabiner/karabiner.json".force = true;
+              # Aerospace config
+              xdg.configFile."aerospace/aerospace.toml".source = ./dotfiles/aerospace/aerospace.toml;
+              xdg.configFile."aerospace/aerospace.toml".force = true;
+              home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
+              xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
+              xdg.configFile."ghostty/themes".source = ./dotfiles/ghostty/themes;
+              xdg.configFile."nvim".source = ./dotfiles/nvim;
 
 	      programs.zsh = {
                    enable = true;
@@ -189,6 +201,8 @@
               "homebrew/homebrew-cask" = homebrew-cask;
               "homebrew/homebrew-bundle" = homebrew-bundle;
               "homebrew/homebrew-services" = homebrew-services;
+              # Needed to install Aerospace from its tap
+              "nikitabobko/tap" = aerospace-tap;
             };
 
             # Optional: Enable fully-declarative tap management

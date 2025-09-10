@@ -1,32 +1,31 @@
 -- lua/plugins/
 -- lua/plugins/notebooks.lua
 return {
-  -- 0) Bootstrap a Python venv for Neovim provider/Jupyter tools
-  {
-    name = "python-venv-bootstrap",
-    priority = 10000,
-    init = function()
-      -- point provider to venv python if present
-      pcall(function()
-        require("config.python").configure_provider()
-      end)
-    end,
-    build = function()
-      -- create venv and install jupytext + ipykernel so molten can run notebooks
-      local ok, py = pcall(require, "config.python")
-      if not ok then
-        return
-      end
-      py.ensure_venv()
-      py.pip_install({ "jupytext", "ipykernel" })
-    end,
-  },
   -- 1) Convert/open/save .ipynb seamlessly
   {
     "GCBallesteros/jupytext.nvim",
     ft = { "ipynb", "py:percent" },
     dependencies = { "nvim-lua/plenary.nvim" },
     lazy = false,
+    init = function()
+      -- Ensure Neovim uses the venv Python and that the venv bin is on PATH
+      local ok, py = pcall(require, "config.python")
+      if ok then
+        py.configure_provider()
+        py.prepend_venv_bin_to_path()
+      end
+    end,
+    build = function()
+      -- Create venv and install jupytext in it
+      local ok, py = pcall(require, "config.python")
+      if not ok then
+        return
+      end
+      py.ensure_venv()
+      py.pip_install({ "jupytext" })
+      py.configure_provider()
+      py.prepend_venv_bin_to_path()
+    end,
     config = true,
     opts = {
       style = "percent", -- open as Python # %% cells
@@ -53,14 +52,41 @@ return {
     "benlubas/molten-nvim", -- molten (recommended over magma)
     version = "*",
     lazy = false,
-    build = ":UpdateRemotePlugins",
-    init = function()
-      -- make sure provider points at our venv
-      pcall(function()
-        require("config.python").configure_provider()
-      end)
+    build = function()
+      -- Ensure provider and deps, then register remote plugins
+      local ok, py = pcall(require, "config.python")
+      if ok then
+        py.ensure_venv()
+        py.configure_provider()
+        py.prepend_venv_bin_to_path()
+        py.ensure_python_modules({
+          "pynvim",
+          { module = "jupyter_client", pip = "jupyter-client" },
+          "nbformat",
+        })
+      end
+      vim.cmd("silent! UpdateRemotePlugins")
     end,
     init = function()
+      -- Ensure provider points at our venv, then UI tweaks
+      pcall(function()
+        local py = require("config.python")
+        py.configure_provider()
+        py.prepend_venv_bin_to_path()
+        -- Ensure molten's required and optional Python deps are present
+        py.ensure_python_modules({
+          "pynvim",                                                -- neovim python provider
+          { module = "jupyter_client", pip = "jupyter-client" }, -- required
+          "nbformat",                                             -- required by many nb ops
+          -- optional but useful for rich outputs
+          "cairosvg",
+          "pnglatex",
+          "plotly",
+          "kaleido",
+          "pyperclip",
+          "pillow",
+        })
+      end)
       -- Optional UI tweaks
       vim.g.molten_image_provider = "image.nvim" -- if you use image.nvim
       vim.g.molten_wrap_output = true
@@ -79,7 +105,16 @@ return {
     end,
     config = function()
       -- Handy keymaps (change <leader>m to taste)
-      vim.keymap.set("n", "<leader>mi", ":MoltenInit python3<CR>", { desc = "Molten: init python kernel" })
+      vim.keymap.set("n", "<leader>mi", function()
+        local ok, py = pcall(require, "config.python")
+        local bufdir = vim.fn.expand("%:p:h")
+        local interp = ok and py.resolve_project_python(bufdir) or nil
+        if interp and vim.fn.exists(":MoltenInit") == 2 then
+          vim.cmd("silent! MoltenInit python3 " .. vim.fn.fnameescape(interp))
+        else
+          vim.cmd("silent! MoltenInit python3")
+        end
+      end, { desc = "Molten: init python kernel (project venv if present)" })
       vim.keymap.set("n", "<leader>mr", ":MoltenEvaluateLine<CR>", { desc = "Molten: run line" })
       vim.keymap.set("x", "<leader>mr", ":<C-u>MoltenEvaluateVisual<CR>", { desc = "Molten: run selection" })
       vim.keymap.set("n", "<leader>mc", ":MoltenReevaluateCell<CR>", { desc = "Molten: rerun cell" })
