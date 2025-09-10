@@ -118,6 +118,9 @@
         loginwindow.GuestEnabled  = false;
         NSGlobalDomain.AppleInterfaceStyle = "Dark";
         NSGlobalDomain.KeyRepeat = 2;
+	NSGlobalDomain.ApplePressAndHoldEnabled = false;
+	NSGlobalDomain.InitialKeyRepeat=15;
+	NSGlobalDomain.com.apple.keyboard.fnState = false;
       };
     };
   in
@@ -149,11 +152,11 @@
 
               # Example: write Karabiner config declaratively
 	      xdg.configFile."karabiner/karabiner.json".source = ./dotfiles/karabiner/karabiner.json;
-	      xdg.configFile."karabiner/karabiner.json".force = True;
+	      xdg.configFile."karabiner/karabiner.json".force = true;
 	      home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
 	      xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
 	      xdg.configFile."ghostty/themes".source = ./dotfiles/ghostty/themes;
-
+	      xdg.configFile."nvim".source = ./dotfiles/nvim;
 
 	      programs.zsh = {
                    enable = true;
