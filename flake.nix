@@ -149,6 +149,7 @@
 
               # Example: write Karabiner config declaratively
 	      xdg.configFile."karabiner/karabiner.json".source = ./dotfiles/karabiner/karabiner.json;
+	      xdg.configFile."karabiner/karabiner.json".force = True;
 	      home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
 	      xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
 	      xdg.configFile."ghostty/themes".source = ./dotfiles/ghostty/themes;
