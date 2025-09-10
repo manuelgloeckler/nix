@@ -1,5 +1,9 @@
 return {
   "kawre/leetcode.nvim",
+  cmd = { "Leet" },
+  keys = {
+    { "<leader>Ll", "<cmd>Leet<cr>", desc = "Leet: Open" },
+  },
   build = function()
     -- Ensure treesitter is updated for html
     vim.cmd(":TSUpdate html")
@@ -13,5 +17,4 @@ return {
     ---@type lc.lang
     lang = "python",
   },
-  lazy = false,
 }

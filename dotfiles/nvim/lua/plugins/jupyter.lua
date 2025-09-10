@@ -1,6 +1,26 @@
 -- lua/plugins/
 -- lua/plugins/notebooks.lua
 return {
+  -- 0) Bootstrap a Python venv for Neovim provider/Jupyter tools
+  {
+    name = "python-venv-bootstrap",
+    priority = 10000,
+    init = function()
+      -- point provider to venv python if present
+      pcall(function()
+        require("config.python").configure_provider()
+      end)
+    end,
+    build = function()
+      -- create venv and install jupytext + ipykernel so molten can run notebooks
+      local ok, py = pcall(require, "config.python")
+      if not ok then
+        return
+      end
+      py.ensure_venv()
+      py.pip_install({ "jupytext", "ipykernel" })
+    end,
+  },
   -- 1) Convert/open/save .ipynb seamlessly
   {
     "GCBallesteros/jupytext.nvim",
@@ -13,9 +33,6 @@ return {
       output_extension = "auto",
       force_ft = "python",
     },
-    build = function()
-      vim.fn.system({ "python3", "-m", "pip", "install", "--user", "--upgrade", "jupytext" })
-    end,
   },
   {
     "bluz71/vim-moonfly-colors",
@@ -37,6 +54,12 @@ return {
     version = "*",
     lazy = false,
     build = ":UpdateRemotePlugins",
+    init = function()
+      -- make sure provider points at our venv
+      pcall(function()
+        require("config.python").configure_provider()
+      end)
+    end,
     init = function()
       -- Optional UI tweaks
       vim.g.molten_image_provider = "image.nvim" -- if you use image.nvim
@@ -67,22 +90,21 @@ return {
   {
     "3rd/image.nvim",
     opts = {
-      backend = "kitty", -- change to "ueberzug", "sixel", etc. if not on Kitty
-      rocks = { "magick" }
+      backend = "kitty", -- change to \"ueberzug\", \"sixel\", etc. if not on Kitty
+      rocks = { "magick" },
+      integrations = {
+        markdown = { enabled = true },
+        neorg = { enabled = true },
+        html = { enabled = true },
+        css = { enabled = true },
+      },
+      max_width = 500,
+      max_height = 500,
+      max_height_window_percentage = math.huge,
+      max_width_window_percentage = math.huge,
+      window_overlap_clear_enabled = false,
+      window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
     },
-    -- rocks = { enabled = false }, -- skip luarocks/hererocks
-    integrations = {
-      markdown = { enabled = true },
-      neorg = { enabled = true },
-      html = { enabled = true },
-      css = { enabled = true },
-    },
-    max_width = 500,
-    max_height = 500,
-    max_height_window_percentage = math.huge,
-    max_width_window_percentage = math.huge,
-    window_overlap_clear_enabled = false,
-    window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
   },
   {
     "GCBallesteros/NotebookNavigator.nvim",

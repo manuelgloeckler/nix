@@ -35,7 +35,7 @@
       nixpkgs.config.allowUnfree = true;
       # List packages installed in system profile. To search by name, run:
       # $ nix-env -qaP | grep wget
-      environment.systemPackages = [ 
+      environment.systemPackages = [
         pkgs.git
         pkgs.vim
         pkgs.neovim
@@ -46,6 +46,7 @@
 	pkgs.neofetch
 	pkgs.uv
 	pkgs.nodejs_22
+    pkgs.python3
       ];
 
       nixpkgs.config.allowBroken = true;
@@ -120,7 +121,7 @@
         NSGlobalDomain.KeyRepeat = 2;
 	NSGlobalDomain.ApplePressAndHoldEnabled = false;
 	NSGlobalDomain.InitialKeyRepeat=15;
-	NSGlobalDomain.com.apple.keyboard.fnState = false;
+	NSGlobalDomain."com.apple.keyboard.fnState" = false;
       };
     };
   in
@@ -128,19 +129,19 @@
     # Build darwin flake using:
     # $ darwin-rebuild build --flake .#simple
     darwinConfigurations."mac" = nix-darwin.lib.darwinSystem {
-      modules = [ 
+      modules = [
         configuration
         mac-app-util.darwinModules.default
         nix-homebrew.darwinModules.nix-homebrew
 	home-manager.darwinModules.home-manager
-        {   
+        {
 	  system.primaryUser = "manug";
 
           home-manager.useGlobalPkgs = true;
           home-manager.useUserPackages = true;
 
-          	
-	  home-manager.backupFileExtension = "hm-backup"; 
+
+	  home-manager.backupFileExtension = "hm-backup";
 
 	  # Your HM config for user manug goes here:
           home-manager.users."manug" = { pkgs, lib, config, ... }: {
@@ -160,7 +161,7 @@
 
 	      programs.zsh = {
                    enable = true;
-                 
+
                    # Keep your existing configs, and append this snippet
                    initExtra = ''
                      # Show system info at shell start
@@ -175,7 +176,7 @@
           nix-homebrew = {
             # Install Homebrew under the default prefix
             enable = true;
-	    
+
             # Apple Silicon Only: Also install Homebrew under the default Intel prefix for Rosetta 2
             enableRosetta = true;
 
