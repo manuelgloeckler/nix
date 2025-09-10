@@ -36,7 +36,7 @@
 
   outputs = inputs@{ self, nix-darwin, nixpkgs, mac-app-util, home-manager, nix-homebrew, homebrew-core, homebrew-cask, homebrew-bundle, homebrew-services, aerospace-tap, ... }:
   let
-    configuration = { pkgs, ... }: {
+    configuration = { pkgs, lib, ... }: {
       nixpkgs.config.allowUnfree = true;
       # List packages installed in system profile. To search by name, run:
       # $ nix-env -qaP | grep wget
@@ -61,10 +61,14 @@
 
       homebrew = {
         enable = true;
+        taps = [
+          "nikitabobko/tap"
+        ];
 
         # Uncomment to install cli packages from Homebrew.
         brews = [
            "mas"
+           "sketchybar"
         ];
 
         # Uncomment to install cask packages from Homebrew.
@@ -131,17 +135,29 @@
 	NSGlobalDomain.ApplePressAndHoldEnabled = false;
 	NSGlobalDomain.InitialKeyRepeat=15;
     	NSGlobalDomain."com.apple.keyboard.fnState" = true;
+        NSGlobalDomain._HIHideMenuBar = true;
       };
 
       # Launch Aerospace at login (user LaunchAgent)
       launchd.user.agents.aerospace = {
-        enable = true;
         serviceConfig = {
           ProgramArguments = [ "/usr/bin/open" "-a" "AeroSpace" ];
           RunAtLoad = true;
           KeepAlive = true;
         };
       };
+
+      launchd.user.agents.sketchybar = {
+        serviceConfig = {
+          ProgramArguments = [ "/opt/homebrew/bin/sketchybar" "--config" "/Users/manug/.config/sketchybar/sketchybarrc" ];
+          RunAtLoad = true;
+          KeepAlive = true;
+          StandardOutPath = "/tmp/sketchybar.out";
+          StandardErrorPath = "/tmp/sketchybar.err";
+        };
+      };
+
+      # (no activation script needed for Homebrew taps; taps are mutable)
     };
   in
   {
@@ -176,6 +192,8 @@
               # Aerospace config
               xdg.configFile."aerospace/aerospace.toml".source = ./dotfiles/aerospace/aerospace.toml;
               xdg.configFile."aerospace/aerospace.toml".force = true;
+              xdg.configFile."sketchybar/sketchybarrc".source = ./dotfiles/sketchybar/sketchybarrc;
+              xdg.configFile."sketchybar/sketchybarrc".force = true;
               home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
               xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
               xdg.configFile."ghostty/themes".source = ./dotfiles/ghostty/themes;
@@ -215,13 +233,11 @@
               "nikitabobko/tap" = aerospace-tap;
             };
 
-            # Optional: Enable fully-declarative tap management
-            #
-            # With mutableTaps disabled, taps can no longer be added imperatively with `brew tap`.
-            mutableTaps = false;
+            # Allow imperative tap management (brew tap, brew update)
+            mutableTaps = true;
 
-            # Automatically migrate existing Homebrew installations
-            # autoMigrate = true;
+            # Automatically migrate/fix existing Homebrew installations (ownership, layout)
+            autoMigrate = true;
           };
         }
       ];

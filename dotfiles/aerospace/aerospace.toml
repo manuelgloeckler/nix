@@ -18,11 +18,13 @@ alt-ctrl-l = "resize width +50"
 alt-ctrl-j = "resize height -50"
 alt-ctrl-k = "resize height +50"
 
-alt-f = "fullscreen toggle"
+# Fullscreen (AeroSpace expects on|off)
+alt-f = "fullscreen on"
+alt-shift-f = "fullscreen off"
 
 # Reload AeroSpace configuration
 alt-r = "reload-config"
 
 # Fully restart AeroSpace (quit + relaunch)
 # Requires Accessibility permissions to be already granted
-alt-shift-r = "exec-and-forget osascript -e 'tell application \"AeroSpace\" to quit'; sleep 0.3; open -a AeroSpace"
+alt-shift-r = "exec-and-forget sh -lc 'osascript -e \"tell application \\\"AeroSpace\\\" to quit\"; sleep 0.5; open -a AeroSpace'"
