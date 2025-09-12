@@ -2,10 +2,6 @@ return {
   "johnseth97/codex.nvim",
   lazy = true,
   cmd = { "Codex", "CodexToggle" },
-  cond = function()
-    local key = vim.env.OPENAI_API_KEY
-    return key ~= nil and key ~= ""
-  end,
   keys = {
     {
       "<leader>cc",
@@ -24,6 +20,6 @@ return {
     width = 0.8,
     height = 0.8,
     model = nil,
-    autoinstall = false, -- managed by Nix; do not auto-install
+    autoinstall = true, -- let plugin install @openai/codex if missing
   },
 }

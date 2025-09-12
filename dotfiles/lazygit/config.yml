@@ -1,0 +1,4 @@
+# Lazygit configuration
+# Allows quitting lazygit by pressing return on the top-level menu
+quitOnTopLevelReturn: true
+

@@ -42,6 +42,8 @@
       # $ nix-env -qaP | grep wget
       environment.systemPackages = [
         pkgs.git
+        pkgs.gh
+        pkgs.lazygit
         pkgs.vim
         pkgs.neovim
         pkgs.obsidian
@@ -54,8 +56,7 @@
     pkgs.python3
     pkgs.python3Packages.jupytext
     pkgs.fd
-        # Codex CLI (scoped npm package via nodePackages_latest)
-        pkgs.nodePackages_latest.openai__codex
+        # Codex CLI managed by Neovim plugin (see codex.nvim)
       ];
 
       nixpkgs.config.allowBroken = true;
@@ -189,6 +190,8 @@
               xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
               xdg.configFile."ghostty/themes".source = ./dotfiles/ghostty/themes;
               xdg.configFile."nvim".source = ./dotfiles/nvim;
+              # Lazygit config
+              xdg.configFile."lazygit/config.yml".source = ./dotfiles/lazygit/config.yml;
 
 	      programs.zsh = {
                    enable = true;
