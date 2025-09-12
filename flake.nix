@@ -54,6 +54,8 @@
     pkgs.python3
     pkgs.python3Packages.jupytext
     pkgs.fd
+        # Codex CLI (scoped npm package via nodePackages_latest)
+        pkgs.nodePackages_latest.openai__codex
       ];
 
       nixpkgs.config.allowBroken = true;
@@ -68,7 +70,6 @@
         # Uncomment to install cli packages from Homebrew.
         brews = [
            "mas"
-           "sketchybar"
         ];
 
         # Uncomment to install cask packages from Homebrew.
@@ -79,8 +80,7 @@
            "unnaturalscrollwheels"
            "font-jetbrains-mono"
            "font-jetbrains-mono-nerd-font"
-           # Tiling window manager for macOS
-           "nikitabobko/tap/aerospace"
+           # Aerospace temporarily disabled (was: "nikitabobko/tap/aerospace")
         ];
 
         # Uncomment to install app store apps using mas-cli.
@@ -135,27 +135,19 @@
 	NSGlobalDomain.ApplePressAndHoldEnabled = false;
 	NSGlobalDomain.InitialKeyRepeat=15;
     	NSGlobalDomain."com.apple.keyboard.fnState" = true;
-        NSGlobalDomain._HIHideMenuBar = true;
+        NSGlobalDomain._HIHideMenuBar = false;
       };
 
-      # Launch Aerospace at login (user LaunchAgent)
-      launchd.user.agents.aerospace = {
-        serviceConfig = {
-          ProgramArguments = [ "/usr/bin/open" "-a" "AeroSpace" ];
-          RunAtLoad = true;
-          KeepAlive = true;
-        };
-      };
+      # Aerospace autostart disabled (was a user LaunchAgent)
+      # launchd.user.agents.aerospace = {
+      #   serviceConfig = {
+      #     ProgramArguments = [ "/usr/bin/open" "-a" "AeroSpace" ];
+      #     RunAtLoad = true;
+      #     KeepAlive = true;
+      #   };
+      # };
 
-      launchd.user.agents.sketchybar = {
-        serviceConfig = {
-          ProgramArguments = [ "/opt/homebrew/bin/sketchybar" "--config" "/Users/manug/.config/sketchybar/sketchybarrc" ];
-          RunAtLoad = true;
-          KeepAlive = true;
-          StandardOutPath = "/tmp/sketchybar.out";
-          StandardErrorPath = "/tmp/sketchybar.err";
-        };
-      };
+      # sketchybar removed
 
       # (no activation script needed for Homebrew taps; taps are mutable)
     };
@@ -192,8 +184,7 @@
               # Aerospace config
               xdg.configFile."aerospace/aerospace.toml".source = ./dotfiles/aerospace/aerospace.toml;
               xdg.configFile."aerospace/aerospace.toml".force = true;
-              xdg.configFile."sketchybar/sketchybarrc".source = ./dotfiles/sketchybar/sketchybarrc;
-              xdg.configFile."sketchybar/sketchybarrc".force = true;
+              # sketchybar removed
               home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
               xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
               xdg.configFile."ghostty/themes".source = ./dotfiles/ghostty/themes;
