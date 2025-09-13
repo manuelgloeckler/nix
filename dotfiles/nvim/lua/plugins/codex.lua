@@ -4,7 +4,7 @@ return {
   cmd = { "Codex", "CodexToggle" },
   keys = {
     {
-      "<leader>cc",
+      "<leader>ac",
       function()
         require("codex").toggle()
       end,
@@ -13,7 +13,7 @@ return {
   },
   opts = {
     keymaps = {
-      toggle = nil,  -- keep internal default off; we set our own keymap
+      toggle = nil, -- keep internal default off; we set our own keymap
       quit = "<C-q>",
     },
     border = "rounded",

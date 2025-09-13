@@ -43,20 +43,19 @@
       environment.systemPackages = [
         pkgs.git
         pkgs.gh
+        pkgs.codex
         pkgs.lazygit
         pkgs.vim
         pkgs.neovim
         pkgs.obsidian
         pkgs.vscode
         pkgs.wget
-	pkgs.ghostty-bin
-	pkgs.neofetch
-	pkgs.uv
-	pkgs.nodejs_22
-    pkgs.python3
-    pkgs.python3Packages.jupytext
-    pkgs.fd
-        # Codex CLI managed by Neovim plugin (see codex.nvim)
+      	pkgs.ghostty-bin
+        pkgs.neofetch
+        pkgs.uv
+        pkgs.nodejs_22
+        pkgs.python3
+        pkgs.python3Packages.jupytext
       ];
 
       nixpkgs.config.allowBroken = true;
