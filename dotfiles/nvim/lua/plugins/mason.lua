@@ -12,4 +12,12 @@ return {
       ensure_installed = vim.tbl_keys(require("lsp_util").servers),
     })
   end,
+  {
+    "stevearc/conform.nvim",
+    opts = {
+      formatters_by_ft = {
+        python = { "ruff_fix", "ruff_format" },
+      },
+    },
+  }
 }

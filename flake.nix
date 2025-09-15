@@ -47,10 +47,13 @@
         pkgs.lazygit
         pkgs.vim
         pkgs.neovim
+        pkgs.fd
+        pkgs.ripgrep
+        pkgs.imagemagick
         pkgs.obsidian
         pkgs.vscode
         pkgs.wget
-      	pkgs.ghostty-bin
+    	pkgs.ghostty-bin
         pkgs.neofetch
         pkgs.uv
         pkgs.nodejs_22
@@ -196,7 +199,7 @@
                    enable = true;
 
                    # Keep your existing configs, and append this snippet
-                   initExtra = ''
+                   initContent = ''
                      # Show system info at shell start
                      if command -v neofetch >/dev/null 2>&1; then
                        neofetch
