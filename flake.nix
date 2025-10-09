@@ -1,173 +1,99 @@
 {
-  description = "Example nix-darwin system flake";
+  description = "Example nix-darwin system flake (fixed)";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
     nix-darwin.url = "github:LnL7/nix-darwin/master";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
+
     mac-app-util.url = "github:hraban/mac-app-util";
-      # NEW:
+
     home-manager.url = "github:nix-community/home-manager";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
+
     nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
+
     # Optional: Declarative tap management
-    homebrew-core = {
-      url = "github:homebrew/homebrew-core";
-      flake = false;
-    };
-    homebrew-cask = {
-      url = "github:homebrew/homebrew-cask";
-      flake = false;
-    };
-    homebrew-bundle = {
-      url = "github:homebrew/homebrew-bundle";
-      flake = false;
-    };
-    homebrew-services = {
-      url = "github:homebrew/homebrew-services";
-      flake = false;
-    };
-    # Aerospace Homebrew tap for installing the app via cask
-    aerospace-tap = {
-      url = "github:nikitabobko/homebrew-tap";
-      flake = false;
-    };
+    homebrew-core = { url = "github:homebrew/homebrew-core"; flake = false; };
+    homebrew-cask = { url = "github:Homebrew/homebrew-cask"; flake = false; };
+    homebrew-bundle = { url = "github:homebrew/homebrew-bundle"; flake = false; };
+    homebrew-services = { url = "github:homebrew/homebrew-services"; flake = false; };
+
+    # Additional taps for formulae used below
+    felixkratz-formulae = { url = "github:FelixKratz/homebrew-formulae"; flake = false; };
+    koekeishiya-formulae = { url = "github:koekeishiya/homebrew-formulae"; flake = false; };
+
+    # Aerospace Homebrew tap (kept for later if needed)
+    aerospace-tap = { url = "github:nikitabobko/homebrew-tap"; flake = false; };
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, mac-app-util, home-manager, nix-homebrew, homebrew-core, homebrew-cask, homebrew-bundle, homebrew-services, aerospace-tap, ... }:
+  outputs = inputs@{ self, nix-darwin, nixpkgs, mac-app-util, home-manager, nix-homebrew,
+                     homebrew-core, homebrew-cask, homebrew-bundle, homebrew-services,
+                     aerospace-tap, felixkratz-formulae, koekeishiya-formulae, ... }:
   let
     configuration = { pkgs, lib, ... }: {
-      nixpkgs.config.allowUnfree = true;
-      # List packages installed in system profile. To search by name, run:
-      # $ nix-env -qaP | grep wget
-      environment.systemPackages = [
-        pkgs.git
-        pkgs.gh
-        pkgs.codex
-        pkgs.lazygit
-        pkgs.vim
-        pkgs.neovim
-        pkgs.tree-sitter
-        pkgs.fd
-        pkgs.ripgrep
-        pkgs.imagemagick
-        pkgs.obsidian
-        pkgs.vscode
-        pkgs.wget
-    	  pkgs.ghostty-bin
-        pkgs.neofetch
-        pkgs.uv
-        pkgs.nodejs_22
-        pkgs.python3
-        pkgs.python3Packages.jupytext
-        pkgs.ghostscript
+      nixpkgs = {
+        hostPlatform = "aarch64-darwin";
+        config = {
+          allowUnfree = true;
+          # Avoid surprising breakages
+          allowBroken = false;
+        };
+      };
+
+      # Base packages
+      environment.systemPackages = with pkgs; [
+        git gh lazygit vim neovim tree-sitter fd ripgrep jq imagemagick
+        obsidian vscode wget neofetch uv nodejs_22 python3 python3Packages.jupytext ghostscript
       ];
 
-      nixpkgs.config.allowBroken = true;
+      # Enable flakes & nix-command
+      nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
-
-      homebrew = {
-        enable = true;
-        taps = [
-          "nikitabobko/tap"
-          "FelixKratz/formulae"
-          "koekeishiya/formulae"
-          "homebrew/cask-fonts"
-        ];
-
-        # Uncomment to install cli packages from Homebrew.
-        brews = [
-           "mas"
-           "lua"
-           "switchaudio-osx"
-           "nowplaying-cli"
-           "sketchybar"
-           "yabai"
-           "skhd"
-           "borders"
-        ];
-
-        # Uncomment to install cask packages from Homebrew.
-        casks = [
-           "zoom"
-           "inkscape"
-           "karabiner-elements"
-           "unnaturalscrollwheels"
-           "font-jetbrains-mono"
-           "font-jetbrains-mono-nerd-font"
-           "klatexformula"
-           "basictex"
-           "sf-symbols"
-           "homebrew/cask-fonts/font-sf-mono"
-           "homebrew/cask-fonts/font-sf-pro"
-           # Aerospace temporarily disabled (was: "nikitabobko/tap/aerospace")
-        ];
-
-        # Uncomment to install app store apps using mas-cli.
-        masApps = {
-           "Microsoft Word"       = 462054704;
-           "Microsoft Excel"      = 462058435;
-           "Microsoft PowerPoint" = 462062816;
-           "Microsoft OneNote"    = 784801555;
-           "OneDrive"             = 823766827;   # optional
-        };
-
-        # Uncomment to automatically update Homebrew and upgrade packages.
-        onActivation.autoUpdate = true;
-        onActivation.upgrade = true;
-      };
-      # Necessary for using flakes on this system.
-      nix.settings.experimental-features = "nix-command flakes";
-
-      # Enable alternative shell support in nix-darwin.
-      # programs.fish.enable = true;
+      # Shells
       programs.zsh.enable = true;
 
-      # Set Git commit hash for darwin-version.
-      system.configurationRevision = self.rev or self.dirtyRev or null;
-
-      # Used for backwards compatibility, please read the changelog before changing.
-      # $ darwin-rebuild changelog
-      system.stateVersion = 6;
-
-      # The platform the configuration will be used on.
-      nixpkgs.hostPlatform = "aarch64-darwin";
-      system.primaryUser = "manug";
-
+      # macOS defaults
       system.defaults = {
-        dock.autohide  = true;
-	dock.persistent-apps = [
-        	"${pkgs.ghostty-bin}/Applications/Ghostty.app"
-		"/Applications/Google Chrome.app"
-		"${pkgs.obsidian}/Applications/Obsidian.app"
-		"/System/Applications/Mail.app"
-		"/System/Applications/Calendar.app"
-	];
-        dock.magnification = false;
-        dock.mineffect = "genie";
-        finder.FXPreferredViewStyle = "clmv";
-	# Hide all desktop icons
-	finder.CreateDesktop = false;
-	finder.AppleShowAllFiles = true;
-        finder.ShowPathbar = true;  # optional
-        finder.ShowStatusBar = true; # optional
-        loginwindow.GuestEnabled  = false;
-        NSGlobalDomain.AppleInterfaceStyle = "Dark";
-        NSGlobalDomain.KeyRepeat = 2;
-	NSGlobalDomain.ApplePressAndHoldEnabled = false;
-	NSGlobalDomain.InitialKeyRepeat=15;
-    	NSGlobalDomain."com.apple.keyboard.fnState" = true;
-        NSGlobalDomain._HIHideMenuBar = false;
+        dock = {
+          autohide = true;
+          persistent-apps = [
+            "/Applications/Ghostty.app"
+            "/Applications/Google Chrome.app"
+            "/System/Applications/Mail.app"
+            "/System/Applications/Calendar.app"
+          ];
+          magnification = false;
+          mineffect = "genie";
+          mru-spaces = false; # Do not rearrange Spaces
+        };
+        finder = {
+          FXPreferredViewStyle = "clmv";
+          CreateDesktop = false; # Hide desktop icons
+          AppleShowAllFiles = true;
+          ShowPathbar = true;
+          ShowStatusBar = true;
+        };
+        loginwindow.GuestEnabled = false;
+        NSGlobalDomain = {
+          AppleInterfaceStyle = "Dark";
+          KeyRepeat = 2;
+          ApplePressAndHoldEnabled = false;
+          InitialKeyRepeat = 15;
+          "com.apple.keyboard.fnState" = true;
+          _HIHideMenuBar = false; # Show macOS menu bar
+        };
+        spaces.spans-displays = false; # Separate Spaces per display (for yabai)
       };
 
-      # Enable yabai and skhd services via nix-darwin
-      services.yabai.enable = true;
-      services.skhd.enable = true;
+      # Use custom launchd agents instead of nix-darwin services or brew services
+      services.yabai.enable = lib.mkForce false;
+      services.skhd.enable = lib.mkForce false;
 
-      # Launch sketchybar and borders as LaunchAgents (user space)
-      launchd.user.agents.sketchybar = {
+      # Launch WM components via launchd (user agents)
+      launchd.user.agents.yabai = {
         serviceConfig = {
-          ProgramArguments = [ "/opt/homebrew/bin/sketchybar" "--config" "/Users/manug/.config/sketchybar/sketchybarrc" ];
+          ProgramArguments = [ "/opt/homebrew/bin/yabai" ];
           RunAtLoad = true;
           KeepAlive = true;
         };
@@ -180,103 +106,126 @@
         };
       };
 
-      # Aerospace autostart disabled (was a user LaunchAgent)
-      # launchd.user.agents.aerospace = {
-      #   serviceConfig = {
-      #     ProgramArguments = [ "/usr/bin/open" "-a" "AeroSpace" ];
-      #     RunAtLoad = true;
-      #     KeepAlive = true;
-      #   };
-      # };
+      # Homebrew declarative management
+      homebrew = {
+        enable = true;
 
-      # sketchybar removed
+        taps = [
+          "FelixKratz/formulae"
+          "koekeishiya/formulae"
+        ];
 
-      # (no activation script needed for Homebrew taps; taps are mutable)
+        brews = [
+          "mas"
+          "lua"
+          "switchaudio-osx"
+          "nowplaying-cli"
+          # Helpful extras
+          # WM stack
+          "koekeishiya/formulae/yabai"
+          "koekeishiya/formulae/skhd"
+          "FelixKratz/formulae/borders"
+        ];
+
+        casks = [
+          "zoom"
+          "inkscape"
+          "karabiner-elements"
+          "unnaturalscrollwheels"
+          "font-jetbrains-mono"
+          "font-jetbrains-mono-nerd-font"
+          "ghostty"
+          "klatexformula"
+          "basictex"
+          "sf-symbols"
+        ];
+
+        masApps = {
+          "Microsoft Word" = 462054704;
+          "Microsoft Excel" = 462058435;
+          "Microsoft PowerPoint" = 462062816;
+          "Microsoft OneNote" = 784801555;
+          "OneDrive" = 823766827;
+        };
+
+        onActivation.autoUpdate = true;
+        onActivation.upgrade = true;
+      };
+
+      # Version pins
+      system.configurationRevision = self.rev or self.dirtyRev or null;
+      # Required by recent nix-darwin: primary login user
+      system.primaryUser = "manug";
+      system.stateVersion = 6; # nix-darwin versioning
     };
   in
   {
-    # Build darwin flake using:
-    # $ darwin-rebuild build --flake .#simple
+    # Build with: darwin-rebuild switch --flake .#mac
     darwinConfigurations."mac" = nix-darwin.lib.darwinSystem {
       modules = [
         configuration
         mac-app-util.darwinModules.default
         nix-homebrew.darwinModules.nix-homebrew
-	home-manager.darwinModules.home-manager
+        home-manager.darwinModules.home-manager
         {
-	  system.primaryUser = "manug";
-
-          home-manager.useGlobalPkgs = true;
-          home-manager.useUserPackages = true;
-
-
-	  home-manager.backupFileExtension = "hm-backup";
-
-	  # Your HM config for user manug goes here:
-          home-manager.users."manug" = { pkgs, lib, config, ... }: {
-              # Required on macOS:
-              home.username = "manug";
-              home.homeDirectory = lib.mkForce "/Users/manug";
-              home.stateVersion = "24.11";  # lock HM state (pick your HM version)
-
-
-              # Example: write Karabiner config declaratively
-              xdg.configFile."karabiner/karabiner.json".source = ./dotfiles/karabiner/karabiner.json;
-              xdg.configFile."karabiner/karabiner.json".force = true;
-              # Aerospace config
-              xdg.configFile."aerospace/aerospace.toml".source = ./dotfiles/aerospace/aerospace.toml;
-              xdg.configFile."aerospace/aerospace.toml".force = true;
-              # sketchybar removed
-              home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
-              xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
-              xdg.configFile."ghostty/themes".source = ./dotfiles/ghostty/themes;
-              xdg.configFile."nvim".source = ./dotfiles/nvim;
-              # Tiling WM + bar configs
-              home.file.".yabairc".source = ./dotfiles/yabai/yabairc;
-              home.file.".skhdrc".source = ./dotfiles/skhd/skhdrc;
-              xdg.configFile."sketchybar".source = ./dotfiles/sketchybar;
-              # Lazygit config
-              xdg.configFile."lazygit/config.yml".source = ./dotfiles/lazygit/config.yml;
-
-	      programs.zsh = {
-                   enable = true;
-
-                   # Keep your existing configs, and append this snippet
-                   initContent = ''
-                     # Show system info at shell start
-                     if command -v neofetch >/dev/null 2>&1; then
-                       neofetch
-                     fi
-                   '';
-                 };
-
-          };
-
+          # nix-homebrew bootstrap & taps
           nix-homebrew = {
-            # Install Homebrew under the default prefix
             enable = true;
-
-            # Apple Silicon Only: Also install Homebrew under the default Intel prefix for Rosetta 2
-            enableRosetta = true;
-
-            # User owning the Homebrew prefix
-            user = "manug";
-
-            # Optional: Declarative tap management
+            enableRosetta = true;   # Apple Silicon only
+            user = "manug";        # Homebrew owner
             taps = {
               "homebrew/homebrew-core" = homebrew-core;
               "homebrew/homebrew-cask" = homebrew-cask;
               "homebrew/homebrew-bundle" = homebrew-bundle;
               "homebrew/homebrew-services" = homebrew-services;
-              # Needed to install Aerospace from its tap
               "nikitabobko/tap" = aerospace-tap;
+              "felixkratz/formulae" = felixkratz-formulae;
+              "koekeishiya/formulae" = koekeishiya-formulae;
             };
-
-            # Allow imperative tap management (brew tap, brew update)
             mutableTaps = true;
-
-            # Automatically migrate/fix existing Homebrew installations (ownership, layout)
             autoMigrate = true;
+          };
+
+          home-manager = {
+            useGlobalPkgs = true;
+            useUserPackages = true;
+            backupFileExtension = "hm-backup";
+            users."manug" = { pkgs, lib, config, ... }: {
+              home = {
+                username = "manug";
+                homeDirectory = lib.mkForce "/Users/manug";
+                stateVersion = "24.11";
+              };
+
+              # dotfiles
+              xdg.configFile."karabiner/karabiner.json" = {
+                source = ./dotfiles/karabiner/karabiner.json;
+                force = true;
+              };
+              home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
+              xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
+              xdg.configFile."ghostty/themes".source = ./dotfiles/ghostty/themes;
+              xdg.configFile."nvim".source = ./dotfiles/nvim;
+
+              # WM + bar configs
+              home.file.".yabairc".source = ./dotfiles/yabai/yabairc;
+              home.file.".skhdrc".source = ./dotfiles/skhd/skhdrc;
+
+              # Lazygit config
+              xdg.configFile."lazygit/config.yml".source = ./dotfiles/lazygit/config.yml;
+
+              programs.zsh = {
+                enable = true;
+                initContent = ''
+                  # Show system info at shell start
+                  if command -v neofetch >/dev/null 2>&1; then
+                    neofetch
+                  fi
+                '';
+              };
+
+              # Managed by launchd user agents defined above
+            };
           };
         }
       ];

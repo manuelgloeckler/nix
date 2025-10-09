@@ -48,6 +48,22 @@
         "type": "github"
       }
     },
+    "felixkratz-formulae": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1758708932,
+        "narHash": "sha256-SsFP4MS1udaS7GMVq9HpsYiTY4tlpXc0CNbk7TzzsjE=",
+        "owner": "FelixKratz",
+        "repo": "homebrew-formulae",
+        "rev": "d67bfcbb7da8c0cc999af348dadf5695db62c419",
+        "type": "github"
+      },
+      "original": {
+        "owner": "FelixKratz",
+        "repo": "homebrew-formulae",
+        "type": "github"
+      }
+    },
     "flake-compat": {
       "flake": false,
       "locked": {
@@ -124,15 +140,15 @@
     "homebrew-cask": {
       "flake": false,
       "locked": {
-        "lastModified": 1757743125,
-        "narHash": "sha256-E/AP33IoFxyRK2GcBnD4dEYrlofVwKX2UxzH3i+8ZWM=",
-        "owner": "homebrew",
+        "lastModified": 1760031460,
+        "narHash": "sha256-GtDbadI1Jtd2YhqD9A46uT0RN0KfX+MQPlrmO85xhpw=",
+        "owner": "Homebrew",
         "repo": "homebrew-cask",
-        "rev": "7ef28f0d8fc47f1f054dcc13fb917356201ef7ec",
+        "rev": "99debeb760c923c6d689834582281b169b3b7e4b",
         "type": "github"
       },
       "original": {
-        "owner": "homebrew",
+        "owner": "Homebrew",
         "repo": "homebrew-cask",
         "type": "github"
       }
@@ -166,6 +182,22 @@
       "original": {
         "owner": "homebrew",
         "repo": "homebrew-services",
+        "type": "github"
+      }
+    },
+    "koekeishiya-formulae": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1759843705,
+        "narHash": "sha256-4dLzkwdIw02V8rbNzdOZ4h3ZwtpqRof2WV3KwXN/EXE=",
+        "owner": "koekeishiya",
+        "repo": "homebrew-formulae",
+        "rev": "c9fc60dcb9746ae35a08e1fa8e6eaa2f604a3b92",
+        "type": "github"
+      },
+      "original": {
+        "owner": "koekeishiya",
+        "repo": "homebrew-formulae",
         "type": "github"
       }
     },
@@ -282,11 +314,13 @@
     "root": {
       "inputs": {
         "aerospace-tap": "aerospace-tap",
+        "felixkratz-formulae": "felixkratz-formulae",
         "home-manager": "home-manager",
         "homebrew-bundle": "homebrew-bundle",
         "homebrew-cask": "homebrew-cask",
         "homebrew-core": "homebrew-core",
         "homebrew-services": "homebrew-services",
+        "koekeishiya-formulae": "koekeishiya-formulae",
         "mac-app-util": "mac-app-util",
         "nix-darwin": "nix-darwin",
         "nix-homebrew": "nix-homebrew",
