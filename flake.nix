@@ -47,18 +47,20 @@
         pkgs.lazygit
         pkgs.vim
         pkgs.neovim
+        pkgs.tree-sitter
         pkgs.fd
         pkgs.ripgrep
         pkgs.imagemagick
         pkgs.obsidian
         pkgs.vscode
         pkgs.wget
-    	pkgs.ghostty-bin
+    	  pkgs.ghostty-bin
         pkgs.neofetch
         pkgs.uv
         pkgs.nodejs_22
         pkgs.python3
         pkgs.python3Packages.jupytext
+        pkgs.ghostscript
       ];
 
       nixpkgs.config.allowBroken = true;
@@ -68,11 +70,21 @@
         enable = true;
         taps = [
           "nikitabobko/tap"
+          "FelixKratz/formulae"
+          "koekeishiya/formulae"
+          "homebrew/cask-fonts"
         ];
 
         # Uncomment to install cli packages from Homebrew.
         brews = [
            "mas"
+           "lua"
+           "switchaudio-osx"
+           "nowplaying-cli"
+           "sketchybar"
+           "yabai"
+           "skhd"
+           "borders"
         ];
 
         # Uncomment to install cask packages from Homebrew.
@@ -83,6 +95,11 @@
            "unnaturalscrollwheels"
            "font-jetbrains-mono"
            "font-jetbrains-mono-nerd-font"
+           "klatexformula"
+           "basictex"
+           "sf-symbols"
+           "homebrew/cask-fonts/font-sf-mono"
+           "homebrew/cask-fonts/font-sf-pro"
            # Aerospace temporarily disabled (was: "nikitabobko/tap/aerospace")
         ];
 
@@ -129,6 +146,8 @@
         dock.magnification = false;
         dock.mineffect = "genie";
         finder.FXPreferredViewStyle = "clmv";
+	# Hide all desktop icons
+	finder.CreateDesktop = false;
 	finder.AppleShowAllFiles = true;
         finder.ShowPathbar = true;  # optional
         finder.ShowStatusBar = true; # optional
@@ -139,6 +158,26 @@
 	NSGlobalDomain.InitialKeyRepeat=15;
     	NSGlobalDomain."com.apple.keyboard.fnState" = true;
         NSGlobalDomain._HIHideMenuBar = false;
+      };
+
+      # Enable yabai and skhd services via nix-darwin
+      services.yabai.enable = true;
+      services.skhd.enable = true;
+
+      # Launch sketchybar and borders as LaunchAgents (user space)
+      launchd.user.agents.sketchybar = {
+        serviceConfig = {
+          ProgramArguments = [ "/opt/homebrew/bin/sketchybar" "--config" "/Users/manug/.config/sketchybar/sketchybarrc" ];
+          RunAtLoad = true;
+          KeepAlive = true;
+        };
+      };
+      launchd.user.agents.borders = {
+        serviceConfig = {
+          ProgramArguments = [ "/opt/homebrew/bin/borders" ];
+          RunAtLoad = true;
+          KeepAlive = true;
+        };
       };
 
       # Aerospace autostart disabled (was a user LaunchAgent)
@@ -192,6 +231,10 @@
               xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
               xdg.configFile."ghostty/themes".source = ./dotfiles/ghostty/themes;
               xdg.configFile."nvim".source = ./dotfiles/nvim;
+              # Tiling WM + bar configs
+              home.file.".yabairc".source = ./dotfiles/yabai/yabairc;
+              home.file.".skhdrc".source = ./dotfiles/skhd/skhdrc;
+              xdg.configFile."sketchybar".source = ./dotfiles/sketchybar;
               # Lazygit config
               xdg.configFile."lazygit/config.yml".source = ./dotfiles/lazygit/config.yml;
 
