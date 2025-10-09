@@ -81,7 +81,6 @@
           ApplePressAndHoldEnabled = false;
           InitialKeyRepeat = 15;
           "com.apple.keyboard.fnState" = true;
-          _HIHideMenuBar = false; # Show macOS menu bar
         };
         spaces.spans-displays = false; # Separate Spaces per display (for yabai)
       };
@@ -91,11 +90,30 @@
       services.skhd.enable = lib.mkForce false;
 
       # Launch WM components via launchd (user agents)
+      launchd.user.agents.skhd = {
+        serviceConfig = {
+          ProgramArguments = [ "/opt/homebrew/bin/skhd" ];
+          RunAtLoad = true;
+          KeepAlive = true;
+          EnvironmentVariables = {
+            PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin";
+            HOME = "/Users/manug";
+          };
+          StandardOutPath = "/Users/manug/Library/Logs/skhd.log";
+          StandardErrorPath = "/Users/manug/Library/Logs/skhd.err.log";
+        };
+      };
       launchd.user.agents.yabai = {
         serviceConfig = {
           ProgramArguments = [ "/opt/homebrew/bin/yabai" ];
           RunAtLoad = true;
           KeepAlive = true;
+          EnvironmentVariables = {
+            PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin";
+            HOME = "/Users/manug";
+          };
+          StandardOutPath = "/Users/manug/Library/Logs/yabai.log";
+          StandardErrorPath = "/Users/manug/Library/Logs/yabai.err.log";
         };
       };
       launchd.user.agents.borders = {

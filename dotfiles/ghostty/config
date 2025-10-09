@@ -11,7 +11,7 @@ scrollback-limit = 1000000
 copy-on-select = true
 
 # Theme name must exactly match a file in ~/.config/ghostty/themes/
-theme = catppuccin-mocha 
+# theme = catppuccin-mocha 
 
 # Subtle transparency & blur (macOS)
 background-opacity = 0.92
@@ -23,6 +23,16 @@ background-opacity = 0.92
 # Fullscreen vs transparency don't mix on macOS; prefer maximize to keep opacity
 maximize = true
 
+# Remove vertical padding (top,bottom)
+window-padding-y = 0,0
+
+# Don’t redistribute leftover pixels to the bottom edge
+window-padding-balance = false
+
+# (macOS) Resize windows in whole terminal rows to avoid leftover pixels
+window-step-resize = true
+
+
 # --- Tabs, splits, tmux-ish navigation ---------------------------------------
 
 keybind = ctrl+n=new_window
@@ -31,6 +41,10 @@ keybind = ctrl+h=goto_split:left
 keybind = ctrl+j=goto_split:bottom
 keybind = ctrl+k=goto_split:top
 keybind = ctrl+l=goto_split:right
+# Close current split/tab/window (context-aware)
+keybind = ctrl+w=close_surface
+keybind = ctrl+a>t=close_tab
+
 
 keybind = ctrl+a>h=new_split:left
 keybind = ctrl+a>j=new_split:down
