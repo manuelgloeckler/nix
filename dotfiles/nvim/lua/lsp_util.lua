@@ -26,28 +26,23 @@ do
   end
 end
 
+-- prefer LSP-based folding if supported
+M.capabilities.textDocument = M.capabilities.textDocument or {}
+M.capabilities.textDocument.foldingRange = {
+  dynamicRegistration = false,
+  lineFoldingOnly = true,
+}
+
 -- Server definitions
 M.servers = {
   clangd = {}, -- C/C++
   rust_analyzer = {}, -- Rust
-  pylsp = {}, -- Python
+  pyright = {}, -- Python (align with LazyVim default)
   lua_ls = {}, -- Lua
   -- Add more servers as needed
 }
 
 -- Generate filetype to server mapping (only if lspconfig is available)
-M.filetype_to_server = {}
-do
-  local ok, lspconfig = pcall(require, "lspconfig")
-  if ok and lspconfig then
-    for server_name, _ in pairs(M.servers) do
-      local cfg = lspconfig[server_name]
-      local filetypes = cfg and cfg.document_config and cfg.document_config.default_config.filetypes or {}
-      for _, ft in ipairs(filetypes) do
-        M.filetype_to_server[ft] = server_name
-      end
-    end
-  end
-end
+M.filetype_to_server = M.filetype_to_server or {}
 
 return M

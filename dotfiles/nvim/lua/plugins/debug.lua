@@ -1,11 +1,5 @@
 -- ~/.config/nvim/lua/plugins/python-dap.lua
 return {
-  -- Enable DAP (core UI + mason-nvim-dap integration)
-  { import = "lazyvim.plugins.extras.dap.core" },
-
-  -- Python language extras (LSP/tools). Includes good defaults for Python.
-  { import = "lazyvim.plugins.extras.lang.python" },
-
   -- Make sure the Python adapter (debugpy) is installed
   {
     "jay-babu/mason-nvim-dap.nvim",

@@ -1,3 +1,23 @@
+-- Require Neovim >= 0.11.2 for latest LazyVim
+do
+  local v = vim.version and vim.version() or { major = 0, minor = 0, patch = 0 }
+  local ok = (v.major > 0)
+    or (v.major == 0 and (v.minor > 11 or (v.minor == 11 and v.patch >= 2)))
+  if not ok then
+    vim.schedule(function()
+      vim.notify(
+        string.format(
+          "LazyVim now requires Neovim >= 0.11.2 (found %d.%d.%d)",
+          v.major,
+          v.minor,
+          v.patch
+        ),
+        vim.log.levels.ERROR
+      )
+    end)
+  end
+end
+
 -- Configure Python provider venv early so plugin builds use it
 pcall(function()
   local py = require("config.python")

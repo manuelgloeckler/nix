@@ -1,5 +1,4 @@
--- Load health shim early so plugin health checks don't crash on 0.10+
-pcall(require, "config.health_shim")
+-- Neovim >= 0.11.2 required by LazyVim 15.x; legacy health shim removed
 
 -- Ensure Python provider (venv) is configured before plugins load
 pcall(function()
