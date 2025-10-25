@@ -5,6 +5,9 @@ M.on_attach = function(client, bufnr)
   local nmap = function(keys, func, desc)
     vim.keymap.set("n", keys, func, { buffer = bufnr, desc = desc })
   end
+  local vmap = function(keys, func, desc)
+    vim.keymap.set("v", keys, func, { buffer = bufnr, desc = desc })
+  end
 
   -- Key mappings
   nmap("gd", require("telescope.builtin").lsp_definitions, "[G]oto [D]efinition")
@@ -13,6 +16,12 @@ M.on_attach = function(client, bufnr)
   nmap("K", vim.lsp.buf.hover, "Hover Documentation")
   nmap("<leader>rn", vim.lsp.buf.rename, "[R]e[n]ame")
   nmap("<leader>ca", vim.lsp.buf.code_action, "[C]ode [A]ction")
+
+  -- Code: Rename (normal + visual). Shows in which-key under <leader>c
+  vim.keymap.set({ "n", "v" }, "<leader>cr", vim.lsp.buf.rename, {
+    buffer = bufnr,
+    desc = "[C]ode: [R]ename",
+  })
 end
 
 -- LSP capabilities (guarded if cmp_nvim_lsp isn't available yet)
