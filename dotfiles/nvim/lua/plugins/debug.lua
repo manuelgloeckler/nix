@@ -20,11 +20,24 @@ return {
     ft = "python",
     dependencies = { "mfussenegger/nvim-dap" },
     config = function()
-      local mason_registry = require("mason-registry")
+      -- Resolve the debugpy adapter python from Mason if available, with fallbacks
+      local debugpy_python
+      local ok_mason, mason_registry = pcall(require, "mason-registry")
+      if ok_mason then
+        local ok_pkg, pkg = pcall(mason_registry.get_package, "debugpy")
+        if ok_pkg and pkg and type(pkg.get_install_path) == "function" then
+          debugpy_python = pkg:get_install_path() .. "/venv/bin/python"
+        else
+          local ok_settings, mason_settings = pcall(require, "mason.settings")
+          if ok_settings and mason_settings.current and mason_settings.current.install_root_dir then
+            debugpy_python = mason_settings.current.install_root_dir .. "/packages/debugpy/venv/bin/python"
+          end
+        end
+      end
+      if not debugpy_python or vim.fn.executable(debugpy_python) ~= 1 then
+        debugpy_python = (vim.fn.executable("python3") == 1) and "python3" or "python"
+      end
 
-      -- Use Mason-installed debugpy's venv for the adapter itself
-      local debugpy = mason_registry.get_package("debugpy")
-      local debugpy_python = debugpy:get_install_path() .. "/venv/bin/python"
       require("dap-python").setup(debugpy_python)
       require("dap-python").test_runner = "pytest"
 

@@ -21,7 +21,6 @@
 
     # Additional taps for formulae used below
     felixkratz-formulae = { url = "github:FelixKratz/homebrew-formulae"; flake = false; };
-    koekeishiya-formulae = { url = "github:koekeishiya/homebrew-formulae"; flake = false; };
 
     # Aerospace Homebrew tap (kept for later if needed)
     aerospace-tap = { url = "github:nikitabobko/homebrew-tap"; flake = false; };
@@ -29,7 +28,7 @@
 
   outputs = inputs@{ self, nix-darwin, nixpkgs, mac-app-util, home-manager, nix-homebrew,
                      homebrew-core, homebrew-cask, homebrew-bundle, homebrew-services,
-                     aerospace-tap, felixkratz-formulae, koekeishiya-formulae, ... }:
+                     aerospace-tap, felixkratz-formulae, ... }:
   let
     configuration = { pkgs, lib, ... }: {
       nixpkgs = {
@@ -77,6 +76,7 @@
         loginwindow.GuestEnabled = false;
         NSGlobalDomain = {
           AppleInterfaceStyle = "Dark";
+          AppleInterfaceStyleSwitchesAutomatically = false;
           KeyRepeat = 2;
           ApplePressAndHoldEnabled = false;
           InitialKeyRepeat = 15;
@@ -86,43 +86,17 @@
       };
 
       # Use custom launchd agents instead of nix-darwin services or brew services
-      services.yabai.enable = lib.mkForce false;
-      services.skhd.enable = lib.mkForce false;
+      #services.yabai.enable = lib.mkForce false;
+      #services.skhd.enable = lib.mkForce false;
 
-      # Launch WM components via launchd (user agents)
-      launchd.user.agents.skhd = {
-        serviceConfig = {
-          ProgramArguments = [ "/opt/homebrew/bin/skhd" ];
-          RunAtLoad = true;
-          KeepAlive = true;
-          EnvironmentVariables = {
-            PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin";
-            HOME = "/Users/manug";
-          };
-          StandardOutPath = "/Users/manug/Library/Logs/skhd.log";
-          StandardErrorPath = "/Users/manug/Library/Logs/skhd.err.log";
-        };
-      };
-      launchd.user.agents.yabai = {
-        serviceConfig = {
-          ProgramArguments = [ "/opt/homebrew/bin/yabai" ];
-          RunAtLoad = true;
-          KeepAlive = true;
-          EnvironmentVariables = {
-            PATH = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin";
-            HOME = "/Users/manug";
-          };
-          StandardOutPath = "/Users/manug/Library/Logs/yabai.log";
-          StandardErrorPath = "/Users/manug/Library/Logs/yabai.err.log";
-        };
-      };
-      launchd.user.agents.borders = {
-        serviceConfig = {
-          ProgramArguments = [ "/opt/homebrew/bin/borders" ];
-          RunAtLoad = true;
-          KeepAlive = true;
-        };
-      };
+      ## Launch WM components via launchd (user agents)
+      #launchd.user.agents.borders = {
+      #  serviceConfig = {
+      #    ProgramArguments = [ "/opt/homebrew/bin/borders" ];
+      #    RunAtLoad = true;
+      #    KeepAlive = true;
+      #  };
+      #};
 
       # Homebrew declarative management
       homebrew = {
@@ -130,7 +104,6 @@
 
         taps = [
           "FelixKratz/formulae"
-          "koekeishiya/formulae"
         ];
 
         brews = [
@@ -140,8 +113,6 @@
           "nowplaying-cli"
           # Helpful extras
           # WM stack
-          "koekeishiya/formulae/yabai"
-          "koekeishiya/formulae/skhd"
           "FelixKratz/formulae/borders"
         ];
 
@@ -150,6 +121,7 @@
           "inkscape"
           "karabiner-elements"
           "unnaturalscrollwheels"
+          "raycast"
           "font-jetbrains-mono"
           "font-jetbrains-mono-nerd-font"
           "ghostty"
@@ -198,7 +170,6 @@
               "homebrew/homebrew-services" = homebrew-services;
               "nikitabobko/tap" = aerospace-tap;
               "felixkratz/formulae" = felixkratz-formulae;
-              "koekeishiya/formulae" = koekeishiya-formulae;
             };
             mutableTaps = true;
             autoMigrate = true;
@@ -226,8 +197,7 @@
               xdg.configFile."nvim".source = ./dotfiles/nvim;
 
               # WM + bar configs
-              home.file.".yabairc".source = ./dotfiles/yabai/yabairc;
-              home.file.".skhdrc".source = ./dotfiles/skhd/skhdrc;
+              # yabai/skhd disabled and not linked
 
               # Lazygit config
               xdg.configFile."lazygit/config.yml".source = ./dotfiles/lazygit/config.yml;

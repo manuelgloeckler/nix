@@ -3,8 +3,7 @@ return {
   -- Copilot: inline suggestions + leader-based keymaps with desc (so they appear in hints)
   {
     "zbirenbaum/copilot.lua",
-    -- if you haven't imported the Copilot extra yet, you can also add:
-    -- dependencies = { { import = "lazyvim.plugins.extras.coding.copilot" } },
+    -- Copilot extra is already imported via lazyvim.json
     keys = {
       {
         "<leader>aA",
@@ -41,11 +40,29 @@ return {
     },
   },
 
-  -- Toggle the regular completion popup (nvim-cmp) under <leader>a as well
+  -- Use blink.cmp with the blink-copilot source for richer Copilot items
   {
-    "hrsh7th/nvim-cmp",
+    "saghen/blink.cmp",
     optional = true,
+    dependencies = { "fang2hou/blink-copilot" },
     opts = function(_, opts)
+      -- Prefer Copilot when it's confident and show a few strong options
+      opts.sources = opts.sources or {}
+      opts.sources.default = { "copilot", "lsp", "path", "snippets", "buffer" }
+      opts.sources.providers = vim.tbl_deep_extend("force", opts.sources.providers or {}, {
+        copilot = {
+          name = "copilot",
+          module = "blink-copilot",
+          score_offset = 100,
+          async = true,
+          opts = {
+            max_completions = 3,
+            debounce = 200,
+          },
+        },
+      })
+
+      -- Allow toggling blink.cmp enablement with <leader>aC
       local enabled = true
       local prev_enabled = opts.enabled
       if type(prev_enabled) ~= "function" then
@@ -56,25 +73,26 @@ return {
       opts.enabled = function()
         return enabled and prev_enabled()
       end
-      vim.g.__cmp_toggle = function(on)
+      vim.g.__blink_toggle = function(on)
         if on == nil then
           enabled = not enabled
         else
           enabled = on
         end
-        vim.notify("nvim-cmp: " .. (enabled and "enabled" or "disabled"))
+        vim.notify("blink.cmp: " .. (enabled and "enabled" or "disabled"))
       end
+
       return opts
     end,
     keys = {
       {
         "<leader>aC",
         function()
-          if vim.g.__cmp_toggle then
-            vim.g.__cmp_toggle()
+          if vim.g.__blink_toggle then
+            vim.g.__blink_toggle()
           end
         end,
-        desc = "AI: Toggle nvim-cmp Completions",
+        desc = "AI: Toggle blink.cmp Completions",
         mode = { "n", "i" },
       },
     },
