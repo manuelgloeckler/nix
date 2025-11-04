@@ -19,5 +19,19 @@ return {
         python = { "ruff_fix", "ruff_format" },
       },
     },
+  },
+  {
+    "mfussenegger/nvim-lint",
+    opts = function(_, opts)
+      opts = opts or {}
+      opts.linters_by_ft = opts.linters_by_ft or {}
+      opts.linters_by_ft.python = { "ruff" }
+
+      if opts.linters and opts.linters.pycodestyle then
+        opts.linters.pycodestyle = nil
+      end
+
+      return opts
+    end,
   }
 }

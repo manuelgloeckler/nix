@@ -97,4 +97,78 @@ return {
       },
     },
   },
+  {
+    "hrsh7th/nvim-cmp",
+    opts = function(_, opts)
+      local cmp = require("cmp")
+      opts = opts or {}
+      opts.mapping = opts.mapping or cmp.mapping.preset.insert({})
+
+      local function try_accept_copilot()
+        local ok, copilot = pcall(require, "copilot.suggestion")
+        if not ok or not copilot then
+          return false
+        end
+
+        local is_visible = copilot.is_visible or copilot.visible
+        if is_visible and is_visible() then
+          copilot.accept()
+          return true
+        end
+
+        return false
+      end
+
+      opts.mapping["<CR>"] = cmp.mapping(function(fallback)
+        if cmp.visible() then
+          cmp.abort()
+        end
+        fallback()
+      end, { "i", "s" })
+
+      opts.mapping["<Tab>"] = cmp.mapping(function(fallback)
+        if cmp.visible() then
+          local has_selection = cmp.get_selected_entry() ~= nil
+          cmp.confirm({
+            behavior = cmp.ConfirmBehavior.Insert,
+            select = not has_selection,
+          })
+          return
+        end
+
+        if try_accept_copilot() then
+          return
+        end
+
+        local ok, luasnip = pcall(require, "luasnip")
+        if ok and luasnip then
+          local can_expand = (luasnip.expand_or_locally_jumpable and luasnip.expand_or_locally_jumpable())
+            or (luasnip.expand_or_jumpable and luasnip.expand_or_jumpable())
+          if can_expand then
+            luasnip.expand_or_jump()
+            return
+          end
+        end
+
+        fallback()
+      end, { "i", "s" })
+
+      opts.mapping["<S-Tab>"] = cmp.mapping(function(fallback)
+        if cmp.visible() then
+          cmp.select_prev_item()
+          return
+        end
+
+        local ok, luasnip = pcall(require, "luasnip")
+        if ok and luasnip and luasnip.jumpable and luasnip.jumpable(-1) then
+          luasnip.jump(-1)
+          return
+        end
+
+        fallback()
+      end, { "i", "s" })
+
+      return opts
+    end,
+  },
 }

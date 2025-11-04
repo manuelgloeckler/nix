@@ -44,6 +44,7 @@
       environment.systemPackages = with pkgs; [
         git gh lazygit vim neovim tree-sitter fd ripgrep jq imagemagick
         obsidian vscode wget neofetch uv nodejs_22 python3 python3Packages.jupytext ghostscript
+        cargo lowfi ffmpeg
       ];
 
       # Enable flakes & nix-command
