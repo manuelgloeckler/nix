@@ -22,13 +22,11 @@
     # Additional taps for formulae used below
     felixkratz-formulae = { url = "github:FelixKratz/homebrew-formulae"; flake = false; };
 
-    # Aerospace Homebrew tap (kept for later if needed)
-    aerospace-tap = { url = "github:nikitabobko/homebrew-tap"; flake = false; };
   };
 
   outputs = inputs@{ self, nix-darwin, nixpkgs, mac-app-util, home-manager, nix-homebrew,
                      homebrew-core, homebrew-cask, homebrew-bundle, homebrew-services,
-                     aerospace-tap, felixkratz-formulae, ... }:
+                     felixkratz-formulae, ... }:
   let
     configuration = { pkgs, lib, ... }: {
       nixpkgs = {
@@ -44,7 +42,7 @@
       environment.systemPackages = with pkgs; [
         git gh lazygit vim neovim tree-sitter fd ripgrep jq imagemagick
         obsidian vscode wget neofetch uv nodejs_22 python3 python3Packages.jupytext ghostscript
-        cargo lowfi ffmpeg
+        cargo lowfi ffmpeg macmon 
       ];
 
       # Enable flakes & nix-command
@@ -169,7 +167,6 @@
               "homebrew/homebrew-cask" = homebrew-cask;
               "homebrew/homebrew-bundle" = homebrew-bundle;
               "homebrew/homebrew-services" = homebrew-services;
-              "nikitabobko/tap" = aerospace-tap;
               "felixkratz/formulae" = felixkratz-formulae;
             };
             mutableTaps = true;
