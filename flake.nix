@@ -101,17 +101,22 @@
           InitialKeyRepeat = 15;
           "com.apple.keyboard.fnState" = true;
         };
-        CustomUserPreferences = {
-          NSGlobalDomain = {
-            NSUserKeyEquivalents = {
-              # Ctrl+Opt+Cmd + 1/2/3 to move window to display
-              "Move to Built-in Retina Display" = "^~@1";
-              "Move to DELL P2720DC (1)" = "^~@2";
-              "Move to DELL P2720DC (2)" = "^~@3";
-            };
-          };
-        };
         spaces.spans-displays = false; # Separate Spaces per display (for yabai)
+      };
+
+      system.defaults.CustomUserPreferences = {
+        NSGlobalDomain = {
+          NSWindowResizeTime = 0.001;
+          NSAutomaticWindowAnimationsEnabled = false;
+        };
+
+        "com.apple.dock" = {
+          expose-animation-duration = 0.1;
+        };
+
+        "com.apple.universalaccess" = {
+          reduceMotion = true;
+        };
       };
 
       # Use custom launchd agents instead of nix-darwin services or brew services
@@ -151,6 +156,7 @@
           "karabiner-elements"
           "unnaturalscrollwheels"
           "raycast"
+          "rectangle"
           "font-jetbrains-mono"
           "font-jetbrains-mono-nerd-font"
           "ghostty"
@@ -213,6 +219,27 @@
                 homeDirectory = lib.mkForce "/Users/manug";
                 stateVersion = "24.11";
               };
+
+              home.activation.rectangleShortcuts = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                # Quit Rectangle so it reloads prefs
+                /usr/bin/killall Rectangle >/dev/null 2>&1 || true
+
+                # Ctrl+Opt+Cmd + Right Arrow => Next Display
+                /usr/bin/defaults write com.knollsoft.Rectangle nextDisplay -dict \
+                  keyCode -int 124 \
+                  modifierFlags -int 1835008
+
+                # Ctrl+Opt+Cmd + Left Arrow => Previous Display
+                /usr/bin/defaults write com.knollsoft.Rectangle previousDisplay -dict \
+                  keyCode -int 123 \
+                  modifierFlags -int 1835008
+
+                # Optional: start Rectangle at login
+                /usr/bin/defaults write com.knollsoft.Rectangle launchOnLogin -bool true
+
+                # Restart
+                /usr/bin/open -gja Rectangle
+              '';
 
               # dotfiles
               xdg.configFile."karabiner/karabiner.json" = {
