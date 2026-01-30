@@ -14,7 +14,7 @@ return {
   opts = {
     keymaps = {
       toggle = nil, -- keep internal default off; we set our own keymap
-      quit = "<C-q>",
+      quit = "<leader>ac",
     },
     border = "rounded",
     width = 0.8,

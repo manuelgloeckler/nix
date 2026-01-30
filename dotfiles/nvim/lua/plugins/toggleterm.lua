@@ -18,6 +18,13 @@ return {
     -- Optional: set a default direction
     direction = "horizontal",
   },
+  config = function(_, opts)
+    local ok, toggleterm = pcall(require, "toggleterm")
+    if not ok then
+      return
+    end
+    toggleterm.setup(opts)
+  end,
   keys = {
     { "<leader>T", "<cmd>ToggleTerm<cr>", desc = "Toggle terminal", mode = { "n", "t" } },
   },

@@ -96,8 +96,8 @@ return {
       --vim.g.molten_copy_output = true
     end,
     config = function()
-      -- Handy keymaps (change <leader>m to taste)
-      vim.keymap.set("n", "<leader>mi", function()
+      -- Handy keymaps (change <leader>j to taste)
+      vim.keymap.set("n", "<leader>ji", function()
         local ok, py = pcall(require, "config.python")
         local bufdir = vim.fn.expand("%:p:h")
         local interp = ok and py.resolve_project_python(bufdir) or nil
@@ -107,11 +107,11 @@ return {
           vim.cmd("silent! MoltenInit python3")
         end
       end, { desc = "Molten: init python kernel (project venv if present)" })
-      vim.keymap.set("n", "<leader>mr", ":MoltenEvaluateLine<CR>", { desc = "Molten: run line" })
-      vim.keymap.set("x", "<leader>mr", ":<C-u>MoltenEvaluateVisual<CR>", { desc = "Molten: run selection" })
-      vim.keymap.set("n", "<leader>mc", ":MoltenReevaluateCell<CR>", { desc = "Molten: rerun cell" })
-      vim.keymap.set("n", "<leader>mo", ":MoltenEnterOutput<CR>", { desc = "Molten: focus output" })
-      vim.keymap.set("n", "<leader>md", ":MoltenDelete<CR>", { desc = "Molten: clear cell/output" })
+      vim.keymap.set("n", "<leader>jr", ":MoltenEvaluateLine<CR>", { desc = "Molten: run line" })
+      vim.keymap.set("x", "<leader>jr", ":<C-u>MoltenEvaluateVisual<CR>", { desc = "Molten: run selection" })
+      vim.keymap.set("n", "<leader>jc", ":MoltenReevaluateCell<CR>", { desc = "Molten: rerun cell" })
+      vim.keymap.set("n", "<leader>jo", ":MoltenEnterOutput<CR>", { desc = "Molten: focus output" })
+      vim.keymap.set("n", "<leader>jd", ":MoltenDelete<CR>", { desc = "Molten: clear cell/output" })
     end,
   },
   {
@@ -156,19 +156,33 @@ return {
         desc = "Prev cell",
       },
       {
-        "<leader>mc",
+        "<leader>jc",
         function()
           require("notebook-navigator").run_cell()
         end,
         desc = "Run cell",
       },
       {
-        "<leader>mn",
+        "<leader>jn",
         function()
           require("notebook-navigator").run_and_move()
         end,
         desc = "Run + next",
       },
     },
+  },
+  -- Ensure which-key shows a Jupyter group for <leader>j
+  {
+    "folke/which-key.nvim",
+    optional = true,
+    opts = function(_, opts)
+      local ok, wk = pcall(require, "which-key")
+      if ok then
+        wk.add({
+          { "<leader>j", group = "Jupyter", icon = "󰠮" },
+        })
+      end
+      return opts
+    end,
   },
 }

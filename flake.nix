@@ -101,6 +101,16 @@
           InitialKeyRepeat = 15;
           "com.apple.keyboard.fnState" = true;
         };
+        CustomUserPreferences = {
+          NSGlobalDomain = {
+            NSUserKeyEquivalents = {
+              # Ctrl+Opt+Cmd + 1/2/3 to move window to display
+              "Move to Built-in Retina Display" = "^~@1";
+              "Move to DELL P2720DC (1)" = "^~@2";
+              "Move to DELL P2720DC (2)" = "^~@3";
+            };
+          };
+        };
         spaces.spans-displays = false; # Separate Spaces per display (for yabai)
       };
 
