@@ -40,9 +40,29 @@
 
       # Base packages
       environment.systemPackages = with pkgs; [
-        git gh lazygit vim neovim tree-sitter fd ripgrep jq imagemagick
-        obsidian vscode wget neofetch uv nodejs_22 python3 python3Packages.jupytext ghostscript
-        cargo lowfi ffmpeg macmon 
+        git
+        gh 
+        lazygit 
+        vim neovim 
+        tree-sitter 
+        fd 
+        ripgrep 
+        jq 
+        imagemagick
+        obsidian 
+        vscode 
+        wget 
+        neofetch 
+        fastfetch
+        uv 
+        nodejs_22 
+        python3 
+        python3Packages.jupytext 
+        ghostscript
+        cargo 
+        lowfi
+        ffmpeg 
+        macmon 
       ];
 
       # Enable flakes & nix-command
@@ -204,8 +224,8 @@
                 enable = true;
                 initContent = ''
                   # Show system info at shell start
-                  if command -v neofetch >/dev/null 2>&1; then
-                    neofetch
+                  if command -v fastfetch >/dev/null 2>&1; then
+                      fastfetch
                   fi
                 '';
               };
