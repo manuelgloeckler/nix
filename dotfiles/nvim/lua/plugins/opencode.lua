@@ -79,6 +79,8 @@ return {
         provider = {
           enabled = "snacks",
           snacks = {
+            auto_insert = true,
+            start_insert = true,
             win = {
               position = "float",
               width = 0.88,
@@ -88,6 +90,22 @@ return {
             },
           },
         },
+      })
+    end,
+    config = function()
+      local group = vim.api.nvim_create_augroup("opencode_terminal_input_mode", { clear = true })
+      vim.api.nvim_create_autocmd("FileType", {
+        group = group,
+        pattern = "opencode_terminal",
+        callback = function(args)
+          local function to_terminal_mode()
+            vim.cmd("startinsert")
+          end
+          vim.keymap.set("n", "i", to_terminal_mode, { buffer = args.buf, desc = "OpenCode: Enter input mode" })
+          vim.keymap.set("n", "a", to_terminal_mode, { buffer = args.buf, desc = "OpenCode: Enter input mode" })
+          vim.keymap.set("n", "I", to_terminal_mode, { buffer = args.buf, desc = "OpenCode: Enter input mode" })
+          vim.keymap.set("n", "A", to_terminal_mode, { buffer = args.buf, desc = "OpenCode: Enter input mode" })
+        end,
       })
     end,
   },
