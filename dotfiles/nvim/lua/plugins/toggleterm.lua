@@ -26,6 +26,6 @@ return {
     toggleterm.setup(opts)
   end,
   keys = {
-    { "<leader>T", "<cmd>ToggleTerm<cr>", desc = "Toggle terminal", mode = { "n", "t" } },
+    { "<leader>T", "<cmd>ToggleTerm<cr>", desc = "Toggle terminal", mode = "n" },
   },
 }

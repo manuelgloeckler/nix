@@ -26,7 +26,63 @@ return {
       py.configure_provider()
       py.prepend_venv_bin_to_path()
     end,
-    config = true,
+    config = function(_, opts)
+      local function seed_empty_ipynb(filename)
+        local stat = vim.loop.fs_stat(filename)
+        if stat and stat.size > 0 then
+          local ok, lines = pcall(vim.fn.readfile, filename)
+          if ok then
+            local content = table.concat(lines, "\n")
+            if content:match("^%s*$") then
+              stat = nil
+            else
+              return false
+            end
+          else
+            return false
+          end
+        end
+        local minimal = {
+          "{",
+          "  \"cells\": [],",
+          "  \"metadata\": {",
+          "    \"kernelspec\": {",
+          "      \"display_name\": \"Python 3\",",
+          "      \"language\": \"python\",",
+          "      \"name\": \"python3\"",
+          "    },",
+          "    \"language_info\": {",
+          "      \"name\": \"python\"",
+          "    }",
+          "  },",
+          "  \"nbformat\": 4,",
+          "  \"nbformat_minor\": 5",
+          "}",
+        }
+        local ok = pcall(vim.fn.writefile, minimal, filename)
+        return ok
+      end
+
+      -- Ensure empty .ipynb files are valid before jupytext reads them.
+      vim.api.nvim_create_autocmd("BufReadCmd", {
+        group = vim.api.nvim_create_augroup("jupytext_seed_empty_ipynb", { clear = true }),
+        pattern = { "*.ipynb" },
+        callback = function(ev)
+          seed_empty_ipynb(ev.match)
+        end,
+      })
+
+      local ok_utils, utils = pcall(require, "jupytext.utils")
+      if ok_utils and utils and type(utils.get_ipynb_metadata) == "function" then
+        local orig_get = utils.get_ipynb_metadata
+        utils.get_ipynb_metadata = function(filename)
+          seed_empty_ipynb(filename)
+          return orig_get(filename)
+        end
+      end
+
+      require("jupytext").setup(opts)
+    end,
     opts = {
       style = "percent", -- open as Python # %% cells
       output_extension = "auto",
@@ -97,7 +153,7 @@ return {
     end,
     config = function()
       -- Handy keymaps (change <leader>j to taste)
-      vim.keymap.set("n", "<leader>ji", function()
+      vim.keymap.set("n", "<leader>jU", function()
         local ok, py = pcall(require, "config.python")
         local bufdir = vim.fn.expand("%:p:h")
         local interp = ok and py.resolve_project_python(bufdir) or nil
@@ -112,6 +168,11 @@ return {
       vim.keymap.set("n", "<leader>jc", ":MoltenReevaluateCell<CR>", { desc = "Molten: rerun cell" })
       vim.keymap.set("n", "<leader>jo", ":MoltenEnterOutput<CR>", { desc = "Molten: focus output" })
       vim.keymap.set("n", "<leader>jd", ":MoltenDelete<CR>", { desc = "Molten: clear cell/output" })
+      vim.keymap.set("n", "<leader>jR", ":MoltenRestart<CR>", { desc = "Molten: restart kernel" })
+      vim.keymap.set("n", "<leader>jI", ":MoltenInterrupt<CR>", { desc = "Molten: interrupt kernel" })
+      vim.keymap.set("n", "<leader>jS", ":MoltenShowOutput<CR>", { desc = "Molten: show output" })
+      vim.keymap.set("n", "<leader>jH", ":MoltenHideOutput<CR>", { desc = "Molten: hide output" })
+      vim.keymap.set("n", "<leader>jK", ":MoltenInfo<CR>", { desc = "Molten: kernel info" })
     end,
   },
   {
@@ -136,11 +197,74 @@ return {
   {
     "GCBallesteros/NotebookNavigator.nvim",
     dependencies = { "benlubas/molten-nvim" },
+    main = "notebook-navigator",
     opts = {
       cells = { "jupytext" }, -- recognizes # %% cells
-      strategy = "molten",    -- send to molten
+      repl_provider = "molten", -- force molten; avoid toggleterm auto-detect
     },
+    config = function(_, opts)
+      local nn = require("notebook-navigator")
+      nn.setup(opts)
+      -- Work around nil cell_marker in run_all_cells/run_cells_below for molten.
+      local utils = require("notebook-navigator.utils")
+      local get_repl = require("notebook-navigator.repls")
+      local miniai_spec = require("notebook-navigator.miniai_spec").miniai_spec
+      local function cell_marker()
+        return utils.get_cell_marker(0, nn.config.cell_markers)
+      end
+      nn.run_all_cells = function(repl_args)
+        local repl = get_repl(nn.config.repl_provider)
+        local buf_length = vim.api.nvim_buf_line_count(0)
+        return repl(1, buf_length, repl_args, cell_marker())
+      end
+      nn.run_cells_below = function(repl_args)
+        local repl = get_repl(nn.config.repl_provider)
+        local buf_length = vim.api.nvim_buf_line_count(0)
+        local cell_object = miniai_spec("i", cell_marker())
+        return repl(cell_object.from.line, buf_length, repl_args, cell_marker())
+      end
+    end,
     keys = {
+      {
+        "]c",
+        function()
+          require("notebook-navigator").move_cell("d")
+        end,
+        desc = "Next cell",
+      },
+      {
+        "[c",
+        function()
+          require("notebook-navigator").move_cell("u")
+        end,
+        desc = "Prev cell",
+      },
+      {
+        "]C",
+        function()
+          local nn = require("notebook-navigator")
+          local max = vim.api.nvim_buf_line_count(0) + 1
+          for _ = 1, max do
+            if nn.move_cell("d") == "last" then
+              break
+            end
+          end
+        end,
+        desc = "Last cell",
+      },
+      {
+        "[C",
+        function()
+          local nn = require("notebook-navigator")
+          local max = vim.api.nvim_buf_line_count(0) + 1
+          for _ = 1, max do
+            if nn.move_cell("u") == "first" then
+              break
+            end
+          end
+        end,
+        desc = "First cell",
+      },
       {
         "jc",
         function()
@@ -156,18 +280,102 @@ return {
         desc = "Prev cell",
       },
       {
-        "<leader>jc",
+        "<leader>jj",
+        function()
+          require("notebook-navigator").move_cell("d")
+        end,
+        desc = "Next cell",
+      },
+      {
+        "<leader>ji",
+        function()
+          require("notebook-navigator").move_cell("u")
+        end,
+        desc = "Prev cell",
+      },
+      {
+        "<leader>jX",
         function()
           require("notebook-navigator").run_cell()
         end,
-        desc = "Run cell",
+        desc = "Run cell (NotebookNavigator)",
+      },
+      {
+        "<leader>jx",
+        function()
+          require("notebook-navigator").run_and_move()
+        end,
+        desc = "Run cell + move (NotebookNavigator)",
+      },
+      {
+        "<leader>ja",
+        function()
+          require("notebook-navigator").run_all_cells()
+        end,
+        desc = "Run all cells (NotebookNavigator)",
+      },
+      {
+        "<leader>jb",
+        function()
+          require("notebook-navigator").run_cells_below()
+        end,
+        desc = "Run cells below (NotebookNavigator)",
+      },
+      {
+        "<leader>j>",
+        function()
+          require("notebook-navigator").swap_cell("d")
+        end,
+        desc = "Swap cell down (NotebookNavigator)",
+      },
+      {
+        "<leader>j<",
+        function()
+          require("notebook-navigator").swap_cell("u")
+        end,
+        desc = "Swap cell up (NotebookNavigator)",
       },
       {
         "<leader>jn",
         function()
-          require("notebook-navigator").run_and_move()
+          require("notebook-navigator").add_cell_below()
         end,
-        desc = "Run + next",
+        desc = "Add cell below (NotebookNavigator)",
+      },
+      {
+        "<leader>jN",
+        function()
+          require("notebook-navigator").add_cell_above()
+        end,
+        desc = "Add cell above (NotebookNavigator)",
+      },
+      {
+        "<leader>jm",
+        function()
+          require("notebook-navigator").merge_cell("d")
+        end,
+        desc = "Merge cell below (NotebookNavigator)",
+      },
+      {
+        "<leader>jM",
+        function()
+          require("notebook-navigator").merge_cell("u")
+        end,
+        desc = "Merge cell above (NotebookNavigator)",
+      },
+      {
+        "<leader>jC",
+        function()
+          require("notebook-navigator").comment_cell()
+        end,
+        desc = "Comment cell (NotebookNavigator)",
+      },
+      {
+        "<leader>j-",
+        function()
+          require("notebook-navigator").split_cell()
+        end,
+        desc = "Split cell (NotebookNavigator)",
       },
     },
   },

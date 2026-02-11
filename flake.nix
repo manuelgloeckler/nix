@@ -63,6 +63,7 @@
         lowfi
         ffmpeg 
         macmon 
+        opencode
       ];
 
       # Enable flakes & nix-command

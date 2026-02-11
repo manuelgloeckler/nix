@@ -6,6 +6,15 @@ return {
     dependencies = {
       "nvim-neotest/neotest-python",
     },
+    keys = {
+      {
+        "<leader>tu",
+        function()
+          require("neotest").summary.toggle()
+        end,
+        desc = "Neotest UI",
+      },
+    },
     opts = function(_, opts)
       -- Interpreter resolver that prefers your project venv/Poetry env
       local function project_python()
