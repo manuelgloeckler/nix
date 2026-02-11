@@ -4,6 +4,19 @@ return {
   {
     "zbirenbaum/copilot.lua",
     -- Copilot extra is already imported via lazyvim.json
+    opts = function(_, opts)
+      opts = opts or {}
+      opts.suggestion = vim.tbl_deep_extend("force", opts.suggestion or {}, {
+        auto_trigger = true,
+        debounce = 300,
+      })
+      opts.filetypes = vim.tbl_deep_extend("force", opts.filetypes or {}, {
+        markdown = false,
+        gitcommit = false,
+        text = false,
+      })
+      return opts
+    end,
     keys = {
       {
         "<leader>aA",
@@ -37,6 +50,30 @@ return {
         desc = "AI: Dismiss Suggestion",
         mode = { "n", "i" },
       },
+      {
+        "<M-w>",
+        function()
+          require("copilot.suggestion").accept_word()
+        end,
+        desc = "AI: Accept Next Word",
+        mode = "i",
+      },
+      {
+        "<M-l>",
+        function()
+          require("copilot.suggestion").accept_line()
+        end,
+        desc = "AI: Accept Next Line",
+        mode = "i",
+      },
+      {
+        "<C-e>",
+        function()
+          require("copilot.suggestion").dismiss()
+        end,
+        desc = "AI: Dismiss (Quick)",
+        mode = "i",
+      },
     },
   },
 
@@ -55,9 +92,13 @@ return {
           module = "blink-copilot",
           score_offset = 100,
           async = true,
+          enabled = function()
+            local ft = vim.bo.filetype
+            return ft ~= "markdown" and ft ~= "gitcommit" and ft ~= "text"
+          end,
           opts = {
-            max_completions = 3,
-            debounce = 200,
+            max_completions = 2,
+            debounce = 300,
           },
         },
       })
@@ -127,16 +168,16 @@ return {
       end, { "i", "s" })
 
       opts.mapping["<Tab>"] = cmp.mapping(function(fallback)
+        if try_accept_copilot() then
+          return
+        end
+
         if cmp.visible() then
           local has_selection = cmp.get_selected_entry() ~= nil
           cmp.confirm({
             behavior = cmp.ConfirmBehavior.Insert,
             select = not has_selection,
           })
-          return
-        end
-
-        if try_accept_copilot() then
           return
         end
 

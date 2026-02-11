@@ -10,6 +10,14 @@ return {
       end,
       desc = "Toggle Codex popup",
     },
+    {
+      "<D-M-C-c>",
+      function()
+        require("codex").toggle()
+      end,
+      desc = "Toggle Codex (Super+c)",
+      mode = { "n", "t" },
+    },
   },
   opts = {
     keymaps = {

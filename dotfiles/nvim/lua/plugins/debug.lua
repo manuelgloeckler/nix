@@ -124,31 +124,55 @@ return {
       require("dap-python").setup(debugpy_python)
       require("dap-python").test_runner = "pytest"
 
-      -- Helper to pick the *project* interpreter for your code (not the adapter)
+      local function parse_shell_args(input)
+        local s = vim.trim(input or "")
+        if s == "" then
+          return {}
+        end
+
+        local args, cur = {}, {}
+        local quote, escaped = nil, false
+
+        for i = 1, #s do
+          local c = s:sub(i, i)
+          if escaped then
+            table.insert(cur, c)
+            escaped = false
+          elseif c == "\\" and quote ~= "'" then
+            escaped = true
+          elseif quote then
+            if c == quote then
+              quote = nil
+            else
+              table.insert(cur, c)
+            end
+          elseif c == '"' or c == "'" then
+            quote = c
+          elseif c:match("%s") then
+            if #cur > 0 then
+              table.insert(args, table.concat(cur))
+              cur = {}
+            end
+          else
+            table.insert(cur, c)
+          end
+        end
+
+        if escaped then
+          table.insert(cur, "\\")
+        end
+        if #cur > 0 then
+          table.insert(args, table.concat(cur))
+        end
+
+        return args
+      end
+
       local function project_python()
-        -- 1) Activated venv
-        local venv = os.getenv("VIRTUAL_ENV")
-        if venv and vim.fn.executable(venv .. "/bin/python") == 1 then
-          return venv .. "/bin/python"
+        local ok, py = pcall(require, "config.python")
+        if ok and py and py.resolve_project_python_or_fallback then
+          return py.resolve_project_python_or_fallback(vim.fn.getcwd())
         end
-        -- 2) .venv or venv in project
-        local cwd = vim.fn.getcwd()
-        local candidates = { ".venv/bin/python", "venv/bin/python" }
-        for _, p in ipairs(candidates) do
-          if vim.fn.executable(cwd .. "/" .. p) == 1 then
-            return cwd .. "/" .. p
-          end
-        end
-        -- 3) Poetry
-        if vim.fn.executable("poetry") == 1 then
-          local ok, path = pcall(function()
-            return vim.fn.systemlist("poetry env info -p")[1]
-          end)
-          if ok and path and vim.fn.executable(path .. "/bin/python") == 1 then
-            return path .. "/bin/python"
-          end
-        end
-        -- 4) Fallback
         return (vim.fn.executable("python3") == 1) and "python3" or "python"
       end
 
@@ -172,8 +196,7 @@ return {
             return vim.fn.input("Module to run: ")
           end,
           args = function()
-            local a = vim.fn.input("Args: ")
-            return (a == "" and {}) or vim.split(a, " ")
+            return parse_shell_args(vim.fn.input("Args: "))
           end,
           console = "integratedTerminal",
           justMyCode = true,

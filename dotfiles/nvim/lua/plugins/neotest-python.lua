@@ -16,36 +16,18 @@ return {
       },
     },
     opts = function(_, opts)
-      -- Interpreter resolver that prefers your project venv/Poetry env
-      local function project_python()
-        local cwd = vim.fn.getcwd()
-        local env = os.getenv("VIRTUAL_ENV")
-        if env and vim.fn.executable(env .. "/bin/python") == 1 then
-          return env .. "/bin/python"
-        end
-        local candidates = { cwd .. "/.venv/bin/python", cwd .. "/venv/bin/python" }
-        for _, p in ipairs(candidates) do
-          if vim.fn.executable(p) == 1 then
-            return p
-          end
-        end
-        if vim.fn.executable("poetry") == 1 then
-          local ok, path = pcall(function()
-            return vim.fn.systemlist("poetry env info -p")[1]
-          end)
-          if ok and path and vim.fn.executable(path .. "/bin/python") == 1 then
-            return path .. "/bin/python"
-          end
-        end
-        return (vim.fn.executable("python3") == 1) and "python3" or "python"
-      end
-
       opts.adapters = opts.adapters or {}
       table.insert(
         opts.adapters,
         require("neotest-python")({
           -- Use your project interpreter so pytest + deps resolve
-          python = project_python(),
+          python = function(root)
+            local ok, py = pcall(require, "config.python")
+            if ok and py and py.resolve_project_python_or_fallback then
+              return py.resolve_project_python_or_fallback(root)
+            end
+            return (vim.fn.executable("python3") == 1) and "python3" or "python"
+          end,
 
           -- If your tests live in "tests/" (pytest default), no need to change this,
           -- but you can force it if you like:

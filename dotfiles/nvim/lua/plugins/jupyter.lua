@@ -27,60 +27,6 @@ return {
       py.prepend_venv_bin_to_path()
     end,
     config = function(_, opts)
-      local function seed_empty_ipynb(filename)
-        local stat = vim.loop.fs_stat(filename)
-        if stat and stat.size > 0 then
-          local ok, lines = pcall(vim.fn.readfile, filename)
-          if ok then
-            local content = table.concat(lines, "\n")
-            if content:match("^%s*$") then
-              stat = nil
-            else
-              return false
-            end
-          else
-            return false
-          end
-        end
-        local minimal = {
-          "{",
-          "  \"cells\": [],",
-          "  \"metadata\": {",
-          "    \"kernelspec\": {",
-          "      \"display_name\": \"Python 3\",",
-          "      \"language\": \"python\",",
-          "      \"name\": \"python3\"",
-          "    },",
-          "    \"language_info\": {",
-          "      \"name\": \"python\"",
-          "    }",
-          "  },",
-          "  \"nbformat\": 4,",
-          "  \"nbformat_minor\": 5",
-          "}",
-        }
-        local ok = pcall(vim.fn.writefile, minimal, filename)
-        return ok
-      end
-
-      -- Ensure empty .ipynb files are valid before jupytext reads them.
-      vim.api.nvim_create_autocmd("BufReadCmd", {
-        group = vim.api.nvim_create_augroup("jupytext_seed_empty_ipynb", { clear = true }),
-        pattern = { "*.ipynb" },
-        callback = function(ev)
-          seed_empty_ipynb(ev.match)
-        end,
-      })
-
-      local ok_utils, utils = pcall(require, "jupytext.utils")
-      if ok_utils and utils and type(utils.get_ipynb_metadata) == "function" then
-        local orig_get = utils.get_ipynb_metadata
-        utils.get_ipynb_metadata = function(filename)
-          seed_empty_ipynb(filename)
-          return orig_get(filename)
-        end
-      end
-
       require("jupytext").setup(opts)
     end,
     opts = {
@@ -121,20 +67,27 @@ return {
         local py = require("config.python")
         py.configure_provider()
         py.prepend_venv_bin_to_path()
-        -- Ensure molten's required and optional Python deps are present
-        py.ensure_python_modules({
-          "pynvim",                                                -- neovim python provider
-          { module = "jupyter_client", pip = "jupyter-client" }, -- required
-          "nbformat",                                             -- required by many nb ops
-          -- optional but useful for rich outputs
-          "cairosvg",
-          "pnglatex",
-          "plotly",
-          "kaleido",
-          "pyperclip",
-          "pillow",
-        })
       end)
+      if vim.fn.exists(":MoltenInstallExtras") == 0 then
+        vim.api.nvim_create_user_command("MoltenInstallExtras", function()
+          local ok, py = pcall(require, "config.python")
+          if not ok then
+            return
+          end
+          local installed = py.ensure_python_modules({
+            "cairosvg",
+            "pnglatex",
+            "plotly",
+            "kaleido",
+            "pyperclip",
+            "pillow",
+          })
+          vim.notify(
+            installed and "Molten extras installed" or "Molten extras install failed",
+            installed and vim.log.levels.INFO or vim.log.levels.WARN
+          )
+        end, { desc = "Install optional Molten python deps" })
+      end
       -- Optional UI tweaks
       vim.g.molten_image_provider = "image.nvim" -- if you use image.nvim
       vim.g.molten_wrap_output = true

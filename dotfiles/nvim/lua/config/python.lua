@@ -74,7 +74,7 @@ function M.prepend_venv_bin_to_path()
   end
   local path = vim.env.PATH or ""
   local delim = (sep == "\\") and ";" or ":"
-  if not path:find(vim.pesc(bin), 1, true) then
+  if not path:find(bin, 1, true) then
     vim.env.PATH = bin .. delim .. path
   end
 end
@@ -140,18 +140,51 @@ function M.find_local_venv_python(start_dir)
   return nil
 end
 
--- Resolve a project python, preferring activated envs (uv/venv/conda),
+-- Resolve a project python, preferring activated envs, then Poetry,
 -- then falling back to a local .venv found by searching upward.
 function M.resolve_project_python(bufdir)
   local sep = package.config:sub(1, 1)
-  local venv = vim.env.VIRTUAL_ENV
-  if venv and venv ~= "" then
-    local cand = sep == "/" and (venv .. "/bin/python") or (venv .. "\\Scripts\\python.exe")
+  local function py_from_env(env_name)
+    local env_path = vim.env[env_name]
+    if not env_path or env_path == "" then
+      return nil
+    end
+    local cand = sep == "/" and (env_path .. "/bin/python") or (env_path .. "\\Scripts\\python.exe")
     if vim.fn.filereadable(cand) == 1 or vim.fn.executable(cand) == 1 then
       return cand
     end
+    return nil
   end
+
+  local activated = py_from_env("VIRTUAL_ENV") or py_from_env("CONDA_PREFIX")
+  if activated then
+    return activated
+  end
+
+  local dir = bufdir or vim.fn.getcwd()
+  local has_pyproject = vim.fs
+    and vim.fs.find
+    and #vim.fs.find("pyproject.toml", { upward = true, type = "file", path = dir }) > 0
+  if has_pyproject and vim.fn.executable("poetry") == 1 then
+    local ok, out = pcall(vim.fn.systemlist, { "poetry", "env", "info", "-p" })
+    local poetry_env = ok and out and out[1] or nil
+    if poetry_env and poetry_env ~= "" then
+      local cand = sep == "/" and (poetry_env .. "/bin/python") or (poetry_env .. "\\Scripts\\python.exe")
+      if vim.fn.filereadable(cand) == 1 or vim.fn.executable(cand) == 1 then
+        return cand
+      end
+    end
+  end
+
   return M.find_local_venv_python(bufdir)
+end
+
+function M.resolve_project_python_or_fallback(bufdir)
+  local py = M.resolve_project_python(bufdir)
+  if py and py ~= "" then
+    return py
+  end
+  return (vim.fn.executable("python3") == 1) and "python3" or "python"
 end
 
 -- --- AUTO KERNEL FOR .venv + MOLTEN ---------------------------------------
