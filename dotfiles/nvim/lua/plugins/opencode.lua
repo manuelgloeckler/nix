@@ -86,7 +86,7 @@ return {
               width = 0.88,
               height = 0.82,
               border = "rounded",
-              enter = false,
+              enter = true,
             },
           },
         },
@@ -94,11 +94,22 @@ return {
     end,
     config = function()
       local group = vim.api.nvim_create_augroup("opencode_terminal_input_mode", { clear = true })
-      vim.api.nvim_create_autocmd("FileType", {
+      vim.api.nvim_create_autocmd({ "TermOpen", "BufEnter" }, {
         group = group,
-        pattern = "opencode_terminal",
+        pattern = { "term://*", "*" },
         callback = function(args)
-          local function to_terminal_mode()
+          local name = vim.api.nvim_buf_get_name(args.buf)
+          local ft = vim.bo[args.buf].filetype
+          local bt = vim.bo[args.buf].buftype
+          local is_opencode_term = name:find("opencode", 1, true)
+            or ft == "opencode_terminal"
+            or (ft == "snacks_terminal" and name:find("opencode", 1, true))
+
+          if not is_opencode_term or bt ~= "terminal" then
+            return
+          end
+
+          local to_terminal_mode = function()
             vim.cmd("startinsert")
           end
           vim.keymap.set("n", "i", to_terminal_mode, { buffer = args.buf, desc = "OpenCode: Enter input mode" })

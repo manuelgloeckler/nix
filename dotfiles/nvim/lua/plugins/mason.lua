@@ -1,18 +1,5 @@
 return {
   {
-    "mason-org/mason.nvim",
-    dependencies = { "mason-org/mason-lspconfig.nvim" },
-    config = function()
-      pcall(function()
-        require("config.python").configure_provider()
-      end)
-      require("mason").setup()
-      require("mason-lspconfig").setup({
-        ensure_installed = vim.tbl_keys(require("lsp_util").servers),
-      })
-    end,
-  },
-  {
     "stevearc/conform.nvim",
     opts = {
       formatters_by_ft = {
@@ -53,6 +40,9 @@ return {
           },
         },
       })
+      -- Keep Python LSP predictable: avoid auto-enabling extra servers from Mason.
+      opts.servers.pylsp = false
+      opts.servers.ruff = false
       return opts
     end,
   },
