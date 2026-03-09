@@ -7,7 +7,7 @@
 -- Or remove existing autocmds by their group name (which is prefixed with `lazyvim_` for the defaults)
 -- e.g. vim.api.nvim_del_augroup_by_name("lazyvim_wrap_spell")
 
-local function seed_ipynb_if_empty(buf, event)
+local function seed_ipynb_if_empty(buf)
   local bufname = vim.api.nvim_buf_get_name(buf)
   if bufname == "" then
     return
@@ -29,7 +29,7 @@ local function seed_ipynb_if_empty(buf, event)
     "  \"nbformat_minor\": 5",
     "}",
   }
-  local stat = vim.loop.fs_stat(bufname)
+  local stat = (vim.uv or vim.loop).fs_stat(bufname)
   if not stat or stat.size == 0 then
     pcall(vim.fn.writefile, minimal, bufname)
     vim.api.nvim_buf_set_lines(buf, 0, -1, false, minimal)
@@ -47,7 +47,7 @@ local ipynb_seed_opts = {
   group = vim.api.nvim_create_augroup("ipynb_seed_json", { clear = true }),
   pattern = { "*.ipynb" },
   callback = function(args)
-    seed_ipynb_if_empty(args.buf, args.event)
+    seed_ipynb_if_empty(args.buf)
   end,
 }
 vim.api.nvim_create_autocmd({ "BufReadPre", "BufNewFile" }, ipynb_seed_opts)

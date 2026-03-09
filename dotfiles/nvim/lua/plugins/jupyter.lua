@@ -88,21 +88,25 @@ return {
           )
         end, { desc = "Install optional Molten python deps" })
       end
-      -- Optional UI tweaks
-      vim.g.molten_image_provider = "image.nvim" -- if you use image.nvim
-      vim.g.molten_wrap_output = true
-      vim.g.molten_auto_image_popup = false
-      vim.g.molten_auto_open_output = false
-      vim.g.molten_output_crop_border = false
-      vim.g.molten_output_virt_lines = true
-      vim.g.molten_output_win_max_height = 50
-      vim.g.molten_output_win_style = "minimal"
-      vim.g.molten_output_win_hide_on_leave = false
+      -- Display: use persistent inline virtual text per cell (notebook-like).
+      -- Disable output_virt_lines (float-window padding) — it fights with
+      -- virt_text_output and causes messy layout on batch runs.
+      vim.g.molten_image_provider = "image.nvim"
+      vim.g.molten_image_location = "virt"
+
       vim.g.molten_virt_text_output = true
-      -- vim.g.molten_virt_lines_off_by_1 = true
-      vim.g.molten_virt_text_max_lines = 10000
-      vim.g.molten_cover_empty_lines = false
-      --vim.g.molten_copy_output = true
+      vim.g.molten_output_virt_lines = false
+      vim.g.molten_auto_open_output = false
+
+      vim.g.molten_cover_empty_lines = true
+      vim.g.molten_wrap_output = true
+
+      vim.g.molten_tick_rate = 150
+      vim.g.molten_virt_text_max_lines = 20
+      vim.g.molten_limit_output_chars = 20000
+
+      vim.g.molten_output_win_max_height = 20
+      vim.g.molten_output_win_style = "minimal"
     end,
     config = function()
       -- Handy keymaps (change <leader>j to taste)
@@ -126,6 +130,18 @@ return {
       vim.keymap.set("n", "<leader>jS", ":MoltenShowOutput<CR>", { desc = "Molten: show output" })
       vim.keymap.set("n", "<leader>jH", ":MoltenHideOutput<CR>", { desc = "Molten: hide output" })
       vim.keymap.set("n", "<leader>jK", ":MoltenInfo<CR>", { desc = "Molten: kernel info" })
+      vim.keymap.set("n", "<leader>jD", function()
+        -- Clear all molten outputs in the buffer
+        pcall(vim.cmd, "MoltenDelete!")
+      end, { desc = "Molten: clear all outputs" })
+      vim.keymap.set("n", "<leader>jA", function()
+        -- Restart kernel then run all cells
+        pcall(vim.cmd, "MoltenRestart!")
+        vim.defer_fn(function()
+          local ok, nn = pcall(require, "notebook-navigator")
+          if ok then nn.run_all_cells() end
+        end, 300)
+      end, { desc = "Molten: restart kernel + run all" })
     end,
   },
   {
@@ -152,30 +168,132 @@ return {
     dependencies = { "benlubas/molten-nvim" },
     main = "notebook-navigator",
     opts = {
-      cells = { "jupytext" }, -- recognizes # %% cells
-      repl_provider = "molten", -- force molten; avoid toggleterm auto-detect
+      cells = { "jupytext" },
+      repl_provider = "molten",
+      syntax_highlight = true,
+      show_hydra_hint = false, -- safer default if hydra keys are remapped
     },
     config = function(_, opts)
       local nn = require("notebook-navigator")
       nn.setup(opts)
-      -- Work around nil cell_marker in run_all_cells/run_cells_below for molten.
-      local utils = require("notebook-navigator.utils")
-      local get_repl = require("notebook-navigator.repls")
-      local miniai_spec = require("notebook-navigator.miniai_spec").miniai_spec
+
+      -- Fix: run_all_cells / run_cells_below must evaluate each cell individually.
+      -- The default impl sends the entire range to molten as one giant cell,
+      -- so outputs all pile up at the end instead of attaching per-cell.
+      local ok_utils, utils = pcall(require, "notebook-navigator.utils")
+      local ok_miniai, miniai_mod = pcall(require, "notebook-navigator.miniai_spec")
+      if not (ok_utils and ok_miniai) then
+        vim.notify("NotebookNavigator internals unavailable, cell overrides skipped", vim.log.levels.WARN)
+        return
+      end
+      local miniai_spec = miniai_mod.miniai_spec
+
       local function cell_marker()
         return utils.get_cell_marker(0, nn.config.cell_markers)
       end
-      nn.run_all_cells = function(repl_args)
-        local repl = get_repl(nn.config.repl_provider)
-        local buf_length = vim.api.nvim_buf_line_count(0)
-        return repl(1, buf_length, repl_args, cell_marker())
+
+      --- Return list of {start_line, end_line} for each cell (1-indexed, inclusive).
+      --- @param from_line number? first line to include (default 1)
+      local function get_cell_ranges(from_line)
+        local last = vim.api.nvim_buf_line_count(0)
+        local lines = vim.api.nvim_buf_get_lines(0, 0, last, false)
+        local marker = cell_marker()
+        local pat = "^" .. vim.pesc(marker)
+
+        -- Collect cell start lines (line *after* the marker)
+        local starts = { 1 }
+        for i, line in ipairs(lines) do
+          if line:find(pat) then
+            starts[#starts + 1] = i + 1
+          end
+        end
+
+        local ranges = {}
+        local lower = from_line or 1
+
+        for idx, s in ipairs(starts) do
+          local e = (idx < #starts) and (starts[idx + 1] - 2) or last
+          s = math.max(s, lower)
+          if s <= e then
+            -- Skip cells that are entirely blank
+            local chunk = table.concat(vim.api.nvim_buf_get_lines(0, s - 1, e, false), "\n")
+            if chunk:find("%S") then
+              ranges[#ranges + 1] = { s, e }
+            end
+          end
+        end
+
+        return ranges
       end
-      nn.run_cells_below = function(repl_args)
-        local repl = get_repl(nn.config.repl_provider)
-        local buf_length = vim.api.nvim_buf_line_count(0)
-        local cell_object = miniai_spec("i", cell_marker())
-        return repl(cell_object.from.line, buf_length, repl_args, cell_marker())
+
+      local function ensure_molten()
+        local ok_status, molten_status = pcall(require, "molten.status")
+        if ok_status and molten_status.initialized() == "" then
+          local ok = pcall(vim.cmd, "MoltenInit")
+          if not ok then
+            vim.notify("MoltenInit failed", vim.log.levels.ERROR)
+            return false
+          end
+        elseif not ok_status then
+          -- molten.status unavailable, try initializing anyway
+          pcall(vim.cmd, "MoltenInit")
+        end
+        return true
       end
+
+      local function run_ranges(ranges)
+        if not ensure_molten() then return end
+        local marker = cell_marker()
+        for _, r in ipairs(ranges) do
+          -- The molten adapter appends a marker line if the buffer is too short,
+          -- so replicate that guard here.
+          local buf_len = vim.api.nvim_buf_line_count(0)
+          if buf_len < (r[2] + 1) then
+            vim.api.nvim_buf_set_lines(0, r[2] + 1, r[2] + 1, false, { marker, "" })
+          end
+          vim.fn.MoltenEvaluateRange(r[1], r[2] + 1)
+        end
+      end
+
+      nn.run_all_cells = function()
+        run_ranges(get_cell_ranges(1))
+      end
+
+      nn.run_cells_below = function()
+        local cur = miniai_spec("i", cell_marker())
+        run_ranges(get_cell_ranges(cur.from.line))
+      end
+
+      -- VS Code-style Shift+Enter / Ctrl+Enter for notebook buffers.
+      -- <S-CR> only works if your terminal sends a distinct keycode;
+      -- test with: insert mode -> Ctrl-V -> Shift-Enter.
+      local function run_and_move_any_mode()
+        local mode = vim.api.nvim_get_mode().mode
+        if mode:sub(1, 1) == "i" then
+          vim.cmd("stopinsert")
+          vim.schedule(function() nn.run_and_move() end)
+        else
+          nn.run_and_move()
+        end
+      end
+
+      local group = vim.api.nvim_create_augroup("NotebookShiftEnter", { clear = true })
+      vim.api.nvim_create_autocmd("FileType", {
+        group = group,
+        pattern = { "python", "ipynb" },
+        callback = function(args)
+          local buf = args.buf
+          vim.keymap.set("n", "<S-CR>", run_and_move_any_mode, {
+            buffer = buf, silent = true, desc = "Run cell and jump to next",
+          })
+          vim.keymap.set("i", "<S-CR>", run_and_move_any_mode, {
+            buffer = buf, silent = true, desc = "Run cell and jump to next",
+          })
+          vim.keymap.set("n", "<C-CR>", function() nn.run_cell() end, {
+            buffer = buf, silent = true, desc = "Run current cell",
+          })
+        end,
+      })
     end,
     keys = {
       {

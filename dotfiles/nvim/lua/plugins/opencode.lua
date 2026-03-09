@@ -74,21 +74,41 @@ return {
     },
     init = function()
       vim.o.autoread = true
+      local opencode_cmd = "opencode --port"
+      local snacks_opts = {
+        win = {
+          position = "float",
+          width = 0.88,
+          height = 0.82,
+          border = "rounded",
+          on_win = function(win)
+            local winid = win and win.win
+            if not winid or not vim.api.nvim_win_is_valid(winid) then
+              return
+            end
+
+            local buf = vim.api.nvim_win_get_buf(winid)
+            if vim.b[buf].opencode_terminal_setup_done then
+              return
+            end
+
+            vim.b[buf].opencode_terminal_setup_done = true
+            require("opencode.terminal").setup(winid)
+          end,
+        },
+      }
       vim.g.opencode_opts = vim.tbl_deep_extend("force", vim.g.opencode_opts or {}, {
         keymap_prefix = "<leader>a",
-        provider = {
-          enabled = "snacks",
-          snacks = {
-            auto_insert = true,
-            start_insert = true,
-            win = {
-              position = "float",
-              width = 0.88,
-              height = 0.82,
-              border = "rounded",
-              enter = true,
-            },
-          },
+        server = {
+          start = function()
+            require("snacks.terminal").open(opencode_cmd, snacks_opts)
+          end,
+          stop = function()
+            require("snacks.terminal").get(opencode_cmd, snacks_opts):close()
+          end,
+          toggle = function()
+            require("snacks.terminal").toggle(opencode_cmd, snacks_opts)
+          end,
         },
       })
     end,

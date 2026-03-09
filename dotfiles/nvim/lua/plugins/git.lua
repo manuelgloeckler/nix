@@ -75,10 +75,12 @@ return {
     "folke/which-key.nvim",
     optional = true,
     opts = function(_, opts)
-      local wk = require("which-key")
-      wk.add({
-        { "<leader>go", group = "Octo" },
-      })
+      local ok, wk = pcall(require, "which-key")
+      if ok then
+        wk.add({
+          { "<leader>go", group = "Octo" },
+        })
+      end
     end,
   },
 

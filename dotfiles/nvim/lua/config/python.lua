@@ -119,7 +119,6 @@ end
 
 -- Find a local .venv python by searching upward from a directory
 function M.find_local_venv_python(start_dir)
-  local sep = package.config:sub(1, 1)
   local dir = start_dir or vim.fn.getcwd()
   local found = vim.fs and vim.fs.find and vim.fs.find(".venv", { upward = true, type = "directory", path = dir }) or {}
   if #found == 0 then
@@ -143,7 +142,6 @@ end
 -- Resolve a project python, preferring activated envs, then Poetry,
 -- then falling back to a local .venv found by searching upward.
 function M.resolve_project_python(bufdir)
-  local sep = package.config:sub(1, 1)
   local function py_from_env(env_name)
     local env_path = vim.env[env_name]
     if not env_path or env_path == "" then
