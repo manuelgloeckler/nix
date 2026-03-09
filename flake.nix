@@ -28,43 +28,7 @@
                      homebrew-core, homebrew-cask, homebrew-bundle, homebrew-services,
                      felixkratz-formulae, ... }:
   let
-    configuration = { pkgs, lib, ... }:
-    let
-      # Pin opencode to the last known macOS-working release.
-      opencodePinned = pkgs.stdenvNoCC.mkDerivation {
-        pname = "opencode";
-        version = "1.2.21";
-        src = pkgs.fetchurl {
-          url = "https://github.com/anomalyco/opencode/releases/download/v1.2.21/opencode-darwin-arm64.zip";
-          hash = "sha256-Qy1TmVeXxJaz+zTdEUJryoLdjldB9bpQltUF+JXDnig=";
-        };
-
-        nativeBuildInputs = with pkgs; [
-          unzip
-          makeBinaryWrapper
-        ];
-
-        dontUnpack = true;
-
-        installPhase = ''
-          runHook preInstall
-
-          install -d $out/bin
-          unzip -j "$src" -d "$out/bin"
-          chmod +x "$out/bin/opencode"
-
-          wrapProgram $out/bin/opencode \
-            --prefix PATH : ${
-              lib.makeBinPath (with pkgs; [
-                fzf
-                ripgrep
-              ])
-            }
-
-          runHook postInstall
-        '';
-      };
-    in {
+    configuration = { pkgs, lib, ... }: {
       nixpkgs = {
         hostPlatform = "aarch64-darwin";
         config = {
@@ -98,7 +62,7 @@
         lowfi
         ffmpeg 
         macmon 
-        opencodePinned
+        opencode
       ];
 
       # Enable flakes & nix-command
