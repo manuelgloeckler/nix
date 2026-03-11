@@ -27,6 +27,15 @@ return {
       opts = opts or {}
       opts.servers = opts.servers or {}
       opts.servers.pyright = vim.tbl_deep_extend("force", opts.servers.pyright or {}, {
+        before_init = function(_, config)
+          local py = require("config.python")
+          local venv_python = py.resolve_project_python(config.root_dir)
+          if venv_python then
+            config.settings = vim.tbl_deep_extend("force", config.settings or {}, {
+              python = { pythonPath = venv_python },
+            })
+          end
+        end,
         settings = {
           python = {
             analysis = {
