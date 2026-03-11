@@ -30,11 +30,18 @@ return {
         before_init = function(_, config)
           local py = require("config.python")
           local venv_python = py.resolve_project_python(config.root_dir)
-          if venv_python then
-            config.settings = vim.tbl_deep_extend("force", config.settings or {}, {
-              python = { pythonPath = venv_python },
-            })
+          if not venv_python then
+            return
           end
+          -- e.g. /project/.venv/bin/python -> venv_dir=/project/.venv
+          local venv_dir = vim.fn.fnamemodify(venv_python, ":h:h")
+          -- Must mutate in-place: config.settings and client.settings share
+          -- the same table reference; replacing config.settings would break it.
+          config.settings.python = vim.tbl_deep_extend("force", config.settings.python or {}, {
+            pythonPath = venv_python,
+            venvPath = vim.fn.fnamemodify(venv_dir, ":h"),
+            venv = vim.fn.fnamemodify(venv_dir, ":t"),
+          })
         end,
         settings = {
           python = {
