@@ -27,7 +27,168 @@ return {
       py.prepend_venv_bin_to_path()
     end,
     config = function(_, opts)
+      -- Disable swap files for .ipynb buffers BEFORE jupytext's BufReadCmd fires.
+      -- Without this, nvim_buf_set_lines inside BufReadCmd can trigger E325
+      -- (swap file ATTENTION) which cannot be answered interactively in a
+      -- callback, causing the notebook open to fail.
+      vim.api.nvim_create_autocmd("BufNew", {
+        pattern = "*.ipynb",
+        callback = function(ev)
+          vim.bo[ev.buf].swapfile = false
+        end,
+      })
+
+      -- Patch jupytext to handle empty/new .ipynb files.
+      -- jupytext.nvim crashes when opening an empty .ipynb because
+      -- vim.json.decode("") fails. We seed the file with minimal
+      -- valid notebook JSON before the decode happens.
+      local utils = require("jupytext.utils")
+      local orig_get_metadata = utils.get_ipynb_metadata
+      utils.get_ipynb_metadata = function(filename)
+        local stat = (vim.uv or vim.loop).fs_stat(filename)
+        if not stat or stat.size == 0 then
+          local minimal = vim.json.encode({
+            cells = {},
+            metadata = {
+              kernelspec = {
+                display_name = "Python 3",
+                language = "python",
+                name = "python3",
+              },
+              language_info = { name = "python" },
+            },
+            nbformat = 4,
+            nbformat_minor = 5,
+          })
+          local f = io.open(filename, "w")
+          if f then
+            f:write(minimal)
+            f:close()
+          end
+        end
+        return orig_get_metadata(filename)
+      end
+
       require("jupytext").setup(opts)
+
+      -- ── Manifest-based orphan cleanup for jupytext temp files ──────────
+      -- jupytext.nvim creates a companion .py file when opening .ipynb.
+      -- It cleans up via BufUnload, but that won't fire on crashes,
+      -- terminal kills, or force-quit. We track created temp files in a
+      -- JSON manifest and sweep orphans on the next Neovim startup.
+
+      local manifest_path = vim.fn.stdpath("cache") .. "/jupytext-tempfiles.json"
+      local fs = vim.uv or vim.loop
+
+      local function manifest_read()
+        local stat = fs.fs_stat(manifest_path)
+        if not stat or stat.size == 0 then
+          return {}
+        end
+        local f = io.open(manifest_path, "r")
+        if not f then
+          return {}
+        end
+        local raw = f:read("*a")
+        f:close()
+        local ok, data = pcall(vim.json.decode, raw)
+        if ok and type(data) == "table" then
+          return data
+        end
+        return {}
+      end
+
+      local function manifest_write(entries)
+        local f = io.open(manifest_path, "w")
+        if not f then
+          return
+        end
+        f:write(vim.json.encode(entries))
+        f:close()
+      end
+
+      local function manifest_add(filepath)
+        local entries = manifest_read()
+        for _, v in ipairs(entries) do
+          if v == filepath then
+            return -- already tracked
+          end
+        end
+        entries[#entries + 1] = filepath
+        manifest_write(entries)
+      end
+
+      local function manifest_remove(filepath)
+        local entries = manifest_read()
+        local filtered = {}
+        for _, v in ipairs(entries) do
+          if v ~= filepath then
+            filtered[#filtered + 1] = v
+          end
+        end
+        manifest_write(filtered)
+      end
+
+      -- Sweep orphaned temp files from previous sessions on startup.
+      vim.api.nvim_create_autocmd("VimEnter", {
+        callback = function()
+          local entries = manifest_read()
+          if #entries == 0 then
+            return
+          end
+          local remaining = {}
+          for _, filepath in ipairs(entries) do
+            if fs.fs_stat(filepath) then
+              local ok = pcall(os.remove, filepath)
+              if not ok then
+                -- couldn't delete, keep tracking it
+                remaining[#remaining + 1] = filepath
+              end
+            end
+            -- file already gone — don't re-add to manifest
+          end
+          manifest_write(remaining)
+        end,
+        once = true,
+      })
+
+      -- After jupytext opens a notebook and creates the companion file,
+      -- record it in the manifest. We use BufReadPost *.ipynb because
+      -- jupytext's BufReadCmd fires first and creates the companion.
+      -- We also set up a BufUnload hook to remove the manifest entry
+      -- when the normal cleanup path succeeds.
+      vim.api.nvim_create_autocmd("BufEnter", {
+        pattern = "*.ipynb",
+        callback = function(ev)
+          local ipynb = vim.fn.resolve(vim.fn.expand(ev.match))
+          if vim.fn.filereadable(ipynb) ~= 1 then
+            return
+          end
+          -- Compute the companion path the same way jupytext.nvim does
+          local ok_meta, metadata = pcall(utils.get_ipynb_metadata, ipynb)
+          if not ok_meta or not metadata or not metadata.extension then
+            return
+          end
+          local companion = utils.get_jupytext_file(ipynb, metadata.extension)
+          companion = vim.fn.resolve(vim.fn.expand(companion))
+          -- Only track if jupytext actually created it (it exists on disk)
+          if not fs.fs_stat(companion) then
+            return
+          end
+          manifest_add(companion)
+
+          -- On BufUnload, if jupytext's cleanup deleted the file, remove
+          -- it from the manifest. If it's still there (pre-existing paired
+          -- file), also remove from manifest since we shouldn't touch it.
+          vim.api.nvim_create_autocmd("BufUnload", {
+            buffer = ev.buf,
+            once = true,
+            callback = function()
+              manifest_remove(companion)
+            end,
+          })
+        end,
+      })
     end,
     opts = {
       style = "percent", -- open as Python # %% cells
@@ -146,22 +307,169 @@ return {
   },
   {
     "3rd/image.nvim",
-    opts = {
-      backend = "kitty", -- change to \"ueberzug\", \"sixel\", etc. if not on Kitty
-      rocks = { "magick" },
-      integrations = {
-        markdown = { enabled = true },
-        neorg = { enabled = true },
-        html = { enabled = true },
-        css = { enabled = true },
-      },
-      max_width = 500,
-      max_height = 500,
-      max_height_window_percentage = math.huge,
-      max_width_window_percentage = math.huge,
-      window_overlap_clear_enabled = false,
-      window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
-    },
+    opts = function(_, opts)
+      -- Prefer the fast native magick Lua binding; fall back to CLI if unavailable
+      local use_rock = pcall(require, "magick")
+      return vim.tbl_deep_extend("force", opts or {}, {
+        backend = "kitty",
+        rocks = { "magick" },
+        processor = use_rock and "magick_rock" or "magick_cli",
+        integrations = {
+          markdown = { enabled = true },
+          neorg = { enabled = true },
+          html = { enabled = true },
+          css = { enabled = true },
+        },
+        max_width = 300,
+        max_height = 300,
+        max_height_window_percentage = math.huge,
+        max_width_window_percentage = math.huge,
+        window_overlap_clear_enabled = true,
+        window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
+      })
+    end,
+    config = function(_, opts)
+      -- If falling back to magick_cli, increase the 10s timeout to 30s so
+      -- slow CLI spawns on Nix-darwin don't immediately error out.
+      if opts.processor == "magick_cli" then
+        local cli = require("image.processors.magick_cli")
+        local orig_resize = cli.resize
+        cli.resize = function(path, width, height, output_path)
+          local uv = vim.uv or vim.loop
+          local out_path = output_path or path:gsub("%.([^.]+)$", "-resized.%1")
+          local done = false
+          local stdout = uv.new_pipe()
+          local stderr = uv.new_pipe()
+          local error_output = ""
+          local convert_cmd = vim.fn.executable("magick") == 1 and "magick" or "convert"
+          uv.spawn(convert_cmd, {
+            args = { path, "-scale", string.format("%dx%d", width, height), out_path },
+            stdio = { nil, stdout, stderr },
+            hide = true,
+          }, function(code)
+            if code ~= 0 then
+              error(error_output ~= "" and error_output or "Failed to resize")
+            end
+            done = true
+          end)
+          uv.read_start(stderr, function(err, data)
+            assert(not err, err)
+            if data then error_output = error_output .. data end
+          end)
+          local success = vim.wait(30000, function() return done end, 10)
+          if not success then error("operation timed out (30s)") end
+          return out_path
+        end
+      end
+
+      require("image").setup(opts)
+
+      -- image.nvim fires magick CLI calls on every WinScrolled event with no
+      -- debounce — fast scrolling creates dozens of concurrent resize processes
+      -- that all time out.  We delete the plugin's autocmd group and re-create
+      -- its handlers with a 150 ms debounce on the scroll path.
+
+      -- Delete image.nvim's built-in autocmd group (setup() already ran).
+      pcall(vim.api.nvim_del_augroup_by_name, "image.nvim")
+
+      local image = require("image")
+
+      -- --- helper: our own augroup for the replacement handlers -------------
+      local grp = vim.api.nvim_create_augroup("image.nvim", { clear = true })
+
+      -- --- 1) Clear on buffer / window change (BufLeave, WinClosed, TabEnter)
+      vim.api.nvim_create_autocmd({ "BufLeave", "WinClosed", "TabEnter" }, {
+        group = grp,
+        callback = function()
+          if not image.is_enabled() then return end
+          vim.schedule(function()
+            local images = image.get_images()
+            local tab_wins = vim.api.nvim_tabpage_list_wins(0)
+            local tab_win_map = {}
+            for _, w in ipairs(tab_wins) do tab_win_map[w] = true end
+
+            for _, img in ipairs(images) do
+              if img.window then
+                local ok, valid = pcall(vim.api.nvim_win_is_valid, img.window)
+                if not ok or not valid then
+                  img:clear()
+                elseif not tab_win_map[img.window] then
+                  img:clear()
+                elseif img.buffer then
+                  local b_ok, b_valid = pcall(vim.api.nvim_buf_is_valid, img.buffer)
+                  if not b_ok or not b_valid then
+                    img:clear()
+                  elseif vim.api.nvim_win_get_buf(img.window) ~= img.buffer then
+                    img:clear()
+                  end
+                end
+              end
+            end
+          end)
+        end,
+      })
+
+      -- --- 2) WinScrolled → DEBOUNCED re-render -----------------------------
+      -- Re-query images inside the timer callback so we never work with a
+      -- stale list captured before the debounce window.
+      local scroll_timer = vim.uv.new_timer()
+      vim.api.nvim_create_autocmd("WinScrolled", {
+        group = grp,
+        callback = function(au)
+          if not image.is_enabled() then return end
+          local winid = tonumber(au.file)
+          if not winid or not vim.api.nvim_win_is_valid(winid) then return end
+          scroll_timer:stop()
+          scroll_timer:start(200, 0, vim.schedule_wrap(function()
+            if not vim.api.nvim_win_is_valid(winid) then return end
+            local images = image.get_images({ window = winid })
+            for _, img in ipairs(images) do
+              local buf_ok, buf_valid = pcall(vim.api.nvim_buf_is_valid, img.buffer)
+              if buf_ok and buf_valid and vim.api.nvim_win_get_buf(winid) == img.buffer then
+                pcall(img.render, img)
+              end
+            end
+          end))
+        end,
+      })
+
+      -- --- 3) WinResized / WinNew → DEBOUNCED clear + re-render -------------
+      local resize_timer = vim.uv.new_timer()
+      vim.api.nvim_create_autocmd({ "WinResized", "WinNew" }, {
+        group = grp,
+        callback = function()
+          if not image.is_enabled() then return end
+          resize_timer:stop()
+          resize_timer:start(200, 0, vim.schedule_wrap(function()
+            local images = image.get_images()
+            for _, img in ipairs(images) do
+              if img.window and vim.api.nvim_win_is_valid(img.window) then
+                local buf_ok, buf_valid = pcall(vim.api.nvim_buf_is_valid, img.buffer)
+                if buf_ok and buf_valid and vim.api.nvim_win_get_buf(img.window) == img.buffer then
+                  pcall(img.clear, img)
+                  pcall(img.render, img)
+                end
+              end
+            end
+          end))
+        end,
+      })
+
+      -- --- 4) Clear images when closing a notebook buffer -------------------
+      -- Prevents errors when molten temp PNGs are deleted and image.nvim tries
+      -- to re-render them on the next WinScrolled / WinResized.
+      vim.api.nvim_create_autocmd("BufUnload", {
+        group = vim.api.nvim_create_augroup("image_clear_on_unload", { clear = true }),
+        callback = function(ev)
+          pcall(function()
+            local instances = image.get_images({ buffer = ev.buf })
+            for _, img in ipairs(instances) do
+              img:clear()
+            end
+          end)
+        end,
+      })
+    end,
   },
   {
     "GCBallesteros/NotebookNavigator.nvim",

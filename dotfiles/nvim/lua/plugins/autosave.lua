@@ -5,8 +5,8 @@ return {
   event = { "InsertLeave", "TextChanged" },
   opts = {
     enabled = true,
-    debounce_delay = 1000, -- ms
-    trigger_events = { "BufLeave", "FocusLost", "InsertLeave", "TextChanged" },
+    debounce_delay = 2000, -- ms
+    trigger_events = { "BufLeave", "FocusLost" },
     condition = function(buf)
       -- Only autosave normal files, not things like Neo-tree or Telescope
       local fn = vim.fn

@@ -1,4 +1,28 @@
 return {
+  -- git-conflict.nvim: visualise and resolve merge conflicts
+  {
+    "akinsho/git-conflict.nvim",
+    version = "*",
+    opts = {
+      default_mappings = true,
+      default_commands = true,
+      disable_diagnostics = false,
+      highlights = {
+        incoming = "DiffAdd",
+        current = "DiffText",
+      },
+    },
+    keys = {
+      { "<leader>gco", "<cmd>GitConflictChooseOurs<cr>", desc = "Conflict: choose ours" },
+      { "<leader>gct", "<cmd>GitConflictChooseTheirs<cr>", desc = "Conflict: choose theirs" },
+      { "<leader>gcb", "<cmd>GitConflictChooseBoth<cr>", desc = "Conflict: choose both" },
+      { "<leader>gcn", "<cmd>GitConflictChooseNone<cr>", desc = "Conflict: choose none" },
+      { "]x", "<cmd>GitConflictNextConflict<cr>", desc = "Next conflict" },
+      { "[x", "<cmd>GitConflictPrevConflict<cr>", desc = "Prev conflict" },
+      { "<leader>gcq", "<cmd>GitConflictListQf<cr>", desc = "Conflicts → quickfix" },
+    },
+  },
+
   -- Neogit: Git UI
   {
     "NeogitOrg/neogit",

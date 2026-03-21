@@ -191,6 +191,15 @@ return {
         {
           type = "python",
           request = "launch",
+          name = "Launch file (debug all code)",
+          program = "${file}",
+          console = "integratedTerminal",
+          justMyCode = false,
+          pythonPath = project_python,
+        },
+        {
+          type = "python",
+          request = "launch",
           name = "Module (python -m ...)",
           module = function()
             return vim.fn.input("Module to run: ")

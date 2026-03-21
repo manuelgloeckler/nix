@@ -49,6 +49,7 @@
         ripgrep 
         jq 
         imagemagick
+        pkg-config
         obsidian 
         vscode 
         wget 
@@ -63,6 +64,7 @@
         ffmpeg 
         macmon 
         opencode
+        claude-code
       ];
 
       # Enable flakes & nix-command
@@ -116,6 +118,12 @@
 
         "com.apple.universalaccess" = {
           reduceMotion = true;
+        };
+
+        "com.apple.symbolichotkeys" = {
+          AppleSymbolicHotKeys = {
+            "36" = { enabled = false; }; # Disable F11 "Show Desktop"
+          };
         };
       };
 
@@ -171,6 +179,7 @@
           "Microsoft PowerPoint" = 462062816;
           "Microsoft OneNote" = 784801555;
           "OneDrive" = 823766827;
+          "Highlights" = 1498912833;
         };
 
         onActivation.autoUpdate = true;

@@ -14,6 +14,20 @@ return {
         end,
         desc = "Neotest UI",
       },
+      {
+        "<leader>td",
+        function()
+          require("neotest").run.run({ strategy = "dap" })
+        end,
+        desc = "Debug nearest test",
+      },
+      {
+        "<leader>tD",
+        function()
+          require("neotest").run.run({ vim.fn.expand("%"), strategy = "dap" })
+        end,
+        desc = "Debug current file",
+      },
     },
     opts = function(_, opts)
       opts.adapters = opts.adapters or {}

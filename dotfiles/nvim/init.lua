@@ -18,6 +18,28 @@ pcall(function()
   py.configure_provider()
 end)
 
+-- ImageMagick: help the magick Lua rock find MagickWand on Nix-darwin.
+-- luarocks' magick module uses pkg-config at build time and ffi.load at
+-- runtime; neither works out-of-the-box because Nix doesn't place .pc files
+-- or dylibs on standard search paths.
+if vim.fn.executable("magick") == 1 then
+  local prefix = vim.fn.trim(vim.fn.system("magick --prefix"))
+  if vim.v.shell_error == 0 and prefix ~= "" then
+    -- Build-time: pkg-config needs to find MagickWand.pc
+    local pc_dir = prefix .. "/lib/pkgconfig"
+    if vim.fn.isdirectory(pc_dir) == 1 then
+      local existing = vim.env.PKG_CONFIG_PATH or ""
+      vim.env.PKG_CONFIG_PATH = pc_dir .. (existing ~= "" and (":" .. existing) or "")
+    end
+    -- Runtime: ffi.load needs the shared library on macOS
+    local lib_dir = prefix .. "/lib"
+    if vim.fn.isdirectory(lib_dir) == 1 then
+      local existing = vim.env.DYLD_LIBRARY_PATH or ""
+      vim.env.DYLD_LIBRARY_PATH = lib_dir .. (existing ~= "" and (":" .. existing) or "")
+    end
+  end
+end
+
 require("config.lazy")
 
 -- Built-in OSC52 clipboard (copy-only)

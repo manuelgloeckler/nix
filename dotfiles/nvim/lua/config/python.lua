@@ -58,11 +58,14 @@ function M.pip_install(pkgs)
   return vim.v.shell_error == 0
 end
 
--- Ensure Neovim uses the venv python for remote plugins
+-- Ensure Neovim uses the venv python for remote plugins.
+-- The Nix wrapper disables all providers via --cmd (loaded_python3_provider=0).
+-- Re-enable the provider here so molten and other remote plugins work.
 function M.configure_provider()
   local py = M.python_bin()
   if M.exists(py) then
     vim.g.python3_host_prog = py
+    vim.g.loaded_python3_provider = nil
   end
 end
 
