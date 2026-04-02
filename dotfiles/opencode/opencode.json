@@ -16,6 +16,22 @@
     "codesearch": "allow"
   },
   "mcp": {
+    "github": {
+      "type": "local",
+      "command": [
+        "/bin/sh",
+        "-lc",
+        "GITHUB_PERSONAL_ACCESS_TOKEN=\"$(gh auth token 2>/dev/null)\" exec nix run nixpkgs#github-mcp-server -- stdio"
+      ]
+    },
+    "github-readonly": {
+      "type": "local",
+      "command": [
+        "/bin/sh",
+        "-lc",
+        "GITHUB_PERSONAL_ACCESS_TOKEN=\"$(gh auth token 2>/dev/null)\" GITHUB_READ_ONLY=true exec nix run nixpkgs#github-mcp-server -- stdio"
+      ]
+    },
     "context7": {
       "type": "remote",
       "url": "https://mcp.context7.com/mcp"
@@ -23,6 +39,10 @@
     "grep": {
       "type": "remote",
       "url": "https://mcp.grep.app"
+    },
+    "uv-mcp": {
+      "type": "local",
+      "command": ["/Users/manug/.local/bin/uv-mcp"]
     }
   }
 }

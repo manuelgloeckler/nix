@@ -15,6 +15,59 @@ metadata:
 - Provide pyproject.toml conventions
 - Assist with Python packaging
 
+## IMPORTANT: Always use `uv run`
+
+**NEVER run bare `python`, `pip`, `pytest`, or other Python commands directly.**
+
+Always prefix with `uv run` to ensure commands execute in the project's virtual environment:
+
+```bash
+# WRONG
+python script.py
+pip install requests
+pytest
+
+# CORRECT
+uv run python script.py
+uv pip install requests
+uv run pytest
+```
+
+## Detecting virtual environments
+
+Before running any Python command, check for a virtual environment:
+
+```bash
+# Check for .venv directory
+if [ -d ".venv" ]; then
+  echo "Virtual environment found at .venv"
+  # Use uv run for all commands
+fi
+
+# Alternative: check for pyproject.toml with uv
+if [ -f "pyproject.toml" ] && [ -f "uv.lock" ]; then
+  echo "UV project detected"
+  # Sync dependencies first
+  uv sync
+fi
+```
+
+## Common command mappings
+
+| Instead of | Use |
+|------------|-----|
+| `python script.py` | `uv run python script.py` |
+| `pip install pkg` | `uv pip install pkg` |
+| `pip install -r requirements.txt` | `uv pip install -r requirements.txt` |
+| `pytest` | `uv run pytest` |
+| `pytest tests/` | `uv run pytest tests/` |
+| `pytest --cov` | `uv run pytest --cov` |
+| `python -m module` | `uv run python -m module` |
+| `black .` | `uv run black .` |
+| `mypy src/` | `uv run mypy src/` |
+| `ruff check .` | `uv run ruff check .` |
+| `ruff format .` | `uv run ruff format .` |
+
 ## Project initialization
 
 ```bash

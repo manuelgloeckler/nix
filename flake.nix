@@ -42,6 +42,7 @@
       environment.systemPackages = with pkgs; [
         git
         gh 
+        github-mcp-server
         lazygit 
         vim neovim 
         tree-sitter 
@@ -284,6 +285,18 @@
                 initContent = ''
                   # OpenAgents PATH
                   export PATH="$HOME/.openagents/nodejs/node_modules/.bin:$PATH"
+
+                  # UV tools PATH
+                  export PATH="$HOME/.local/bin:$PATH"
+
+                  # GitHub MCP auth from gh CLI
+                  if command -v gh >/dev/null 2>&1; then
+                    _gh_pat="$(gh auth token 2>/dev/null || true)"
+                    if [ -n "$_gh_pat" ]; then
+                      export GITHUB_PAT="$_gh_pat"
+                    fi
+                    unset _gh_pat
+                  fi
 
                   # Show system info at shell start
                   if command -v fastfetch >/dev/null 2>&1; then
