@@ -266,9 +266,25 @@
               # Lazygit config
               xdg.configFile."lazygit/config.yml".source = ./dotfiles/lazygit/config.yml;
 
+              # OpenCode config
+              xdg.configFile."opencode/opencode.json".source = ./dotfiles/opencode/opencode.json;
+              xdg.configFile."opencode/system-prompt.md".source = ./dotfiles/opencode/system-prompt.md;
+              xdg.configFile."opencode/skills".source = ./dotfiles/opencode/skills;
+              xdg.configFile."opencode/themes".source = ./dotfiles/opencode/themes;
+
+              home.activation.openagents = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                if ! command -v openagents >/dev/null 2>&1 && [ ! -f "$HOME/.openagents/nodejs/node_modules/.bin/openagents" ]; then
+                  echo "Installing OpenAgents..."
+                  curl -fsSL https://openagents.org/install.sh | bash 2>/dev/null || true
+                fi
+              '';
+
               programs.zsh = {
                 enable = true;
                 initContent = ''
+                  # OpenAgents PATH
+                  export PATH="$HOME/.openagents/nodejs/node_modules/.bin:$PATH"
+
                   # Show system info at shell start
                   if command -v fastfetch >/dev/null 2>&1; then
                       fastfetch
