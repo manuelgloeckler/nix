@@ -263,11 +263,16 @@ return {
       vim.g.molten_wrap_output = true
 
       vim.g.molten_tick_rate = 150
-      vim.g.molten_virt_text_max_lines = 20
-      vim.g.molten_limit_output_chars = 20000
+      vim.g.molten_virt_text_max_lines = 100
+      vim.g.molten_limit_output_chars = 1000000
 
-      vim.g.molten_output_win_max_height = 20
+      -- Output float window: make it tall so you can scroll through long output.
+      -- Use `:MoltenEnterOutput` (<leader>jo) to focus the float — once inside
+      -- you can scroll normally, yank text, search, etc.  Press `q` to leave.
+      vim.g.molten_output_win_max_height = 50
       vim.g.molten_output_win_style = "minimal"
+      vim.g.molten_output_win_border = { "", "━", "", "", "", "━", "", "" }
+      vim.g.molten_output_win_cover_gutter = false
     end,
     config = function()
       -- Handy keymaps (change <leader>j to taste)
@@ -284,13 +289,40 @@ return {
       vim.keymap.set("n", "<leader>jr", ":MoltenEvaluateLine<CR>", { desc = "Molten: run line" })
       vim.keymap.set("x", "<leader>jr", ":<C-u>MoltenEvaluateVisual<CR>", { desc = "Molten: run selection" })
       vim.keymap.set("n", "<leader>jc", ":MoltenReevaluateCell<CR>", { desc = "Molten: rerun cell" })
-      vim.keymap.set("n", "<leader>jo", ":MoltenEnterOutput<CR>", { desc = "Molten: focus output" })
+      vim.keymap.set("n", "<leader>jo", function()
+        vim.cmd("MoltenEnterOutput")
+        -- Once inside the output float, map `q` to leave it
+        vim.schedule(function()
+          local win = vim.api.nvim_get_current_win()
+          local cfg = vim.api.nvim_win_get_config(win)
+          if cfg.relative and cfg.relative ~= "" then
+            vim.keymap.set("n", "q", "<cmd>wincmd p<CR>", { buffer = 0, nowait = true, desc = "Leave output float" })
+          end
+        end)
+      end, { desc = "Molten: focus output (q to leave)" })
       vim.keymap.set("n", "<leader>jd", ":MoltenDelete<CR>", { desc = "Molten: clear cell/output" })
       vim.keymap.set("n", "<leader>jR", ":MoltenRestart<CR>", { desc = "Molten: restart kernel" })
       vim.keymap.set("n", "<leader>jI", ":MoltenInterrupt<CR>", { desc = "Molten: interrupt kernel" })
       vim.keymap.set("n", "<leader>jS", ":MoltenShowOutput<CR>", { desc = "Molten: show output" })
       vim.keymap.set("n", "<leader>jH", ":MoltenHideOutput<CR>", { desc = "Molten: hide output" })
       vim.keymap.set("n", "<leader>jK", ":MoltenInfo<CR>", { desc = "Molten: kernel info" })
+      vim.keymap.set("n", "<leader>jy", function()
+        -- Enter output float, select all, yank to system clipboard, leave
+        pcall(vim.cmd, "MoltenEnterOutput")
+        vim.schedule(function()
+          local win = vim.api.nvim_get_current_win()
+          local cfg = vim.api.nvim_win_get_config(win)
+          if cfg.relative and cfg.relative ~= "" then
+            local lines = vim.api.nvim_buf_get_lines(0, 0, -1, false)
+            local text = table.concat(lines, "\n")
+            vim.fn.setreg("+", text)
+            vim.notify("Output copied to clipboard (" .. #lines .. " lines)", vim.log.levels.INFO)
+            vim.cmd("wincmd p")
+          else
+            vim.notify("No output window to copy from", vim.log.levels.WARN)
+          end
+        end)
+      end, { desc = "Molten: yank output to clipboard" })
       vim.keymap.set("n", "<leader>jD", function()
         -- Clear all molten outputs in the buffer
         pcall(vim.cmd, "MoltenDelete!")
