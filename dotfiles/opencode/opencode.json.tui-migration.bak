@@ -1,11 +1,11 @@
 {
   "$schema": "https://opencode.ai/config.json",
+  "theme": "ayu-dark",
   "instructions": [
     "~/.config/opencode/system-prompt.md"
   ],
   "plugin": [
     "opencode-claude-auth",
-    "opencode-anthropic-auth@0.0.13",
     "@zenobius/opencode-skillful",
     "opencode-pollinations-plugin",
     "@bdliyq/opencode-rate-limit-retry@latest"
@@ -19,12 +19,20 @@
   },
   "mcp": {
     "github": {
-      "type": "remote",
-      "url": "https://api.githubcopilot.com/mcp/"
+      "type": "local",
+      "command": [
+        "/bin/sh",
+        "-lc",
+        "GITHUB_PERSONAL_ACCESS_TOKEN=\"$(gh auth token 2>/dev/null)\" exec nix run nixpkgs#github-mcp-server -- stdio"
+      ]
     },
     "github-readonly": {
-      "type": "remote",
-      "url": "https://api.githubcopilot.com/mcp/readonly"
+      "type": "local",
+      "command": [
+        "/bin/sh",
+        "-lc",
+        "GITHUB_PERSONAL_ACCESS_TOKEN=\"$(gh auth token 2>/dev/null)\" GITHUB_READ_ONLY=true exec nix run nixpkgs#github-mcp-server -- stdio"
+      ]
     },
     "context7": {
       "type": "remote",

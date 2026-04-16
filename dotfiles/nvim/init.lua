@@ -12,17 +12,43 @@ do
   end
 end
 
--- Configure Python provider venv early so plugin builds use it
-pcall(function()
-  local py = require("config.python")
-  py.configure_provider()
-end)
+-- Detect remote-nvim.nvim headless host *before* lazy.nvim starts, so plugin
+-- specs / extras can gate themselves with `cond = not vim.g.remote_neovim_host`.
+-- remote-nvim.nvim sets this same flag later via --remote-send, which is too
+-- late for lazy.nvim's dep resolution. We detect it early via the XDG workspace
+-- path the plugin injects into the remote's environment.
+if (vim.env.XDG_CONFIG_HOME or ""):find("%.remote%-nvim/workspaces", 1) then
+  vim.g.remote_neovim_host = true
+end
+
+if vim.g.remote_neovim_host then
+  local xdg_config_home = vim.env.XDG_CONFIG_HOME or ""
+  local remote_nvim_home = vim.fs.dirname(vim.fs.dirname(vim.fs.dirname(xdg_config_home)))
+  if remote_nvim_home and remote_nvim_home ~= "." then
+    local remote_bin = remote_nvim_home .. "/bin"
+    if vim.fn.isdirectory(remote_bin) == 1 then
+      local path = vim.env.PATH or ""
+      vim.env.PATH = remote_bin .. (path ~= "" and (":" .. path) or "")
+    end
+  end
+end
+
+-- Configure Python provider venv early so plugin builds use it.
+-- Skip on a remote-nvim host — there's typically no local Python toolchain
+-- and the venv bootstrap will just spin.
+if not vim.g.remote_neovim_host then
+  pcall(function()
+    local py = require("config.python")
+    py.configure_provider()
+  end)
+end
 
 -- ImageMagick: help the magick Lua rock find MagickWand on Nix-darwin.
 -- luarocks' magick module uses pkg-config at build time and ffi.load at
 -- runtime; neither works out-of-the-box because Nix doesn't place .pc files
 -- or dylibs on standard search paths.
-if vim.fn.executable("magick") == 1 then
+-- Skip on remote-nvim hosts — image.nvim/molten aren't shipped there.
+if not vim.g.remote_neovim_host and vim.fn.executable("magick") == 1 then
   local prefix = vim.fn.trim(vim.fn.system("magick --prefix"))
   if vim.v.shell_error == 0 and prefix ~= "" then
     -- Build-time: pkg-config needs to find MagickWand.pc

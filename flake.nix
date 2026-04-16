@@ -1,5 +1,5 @@
 {
-  description = "Example nix-darwin system flake (fixed)";
+  description = "Nix configs for macOS and Linux server environments";
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
@@ -154,6 +154,7 @@
           "lua"
           "switchaudio-osx"
           "nowplaying-cli"
+          "tgpt"
           # Helpful extras
           # WM stack
           "FelixKratz/formulae/borders"
@@ -163,7 +164,7 @@
           "zoom"
           "inkscape"
           "karabiner-elements"
-          "unnaturalscrollwheels"
+          "linearmouse"
           "raycast"
           "rectangle"
           "font-jetbrains-mono"
@@ -175,23 +176,98 @@
         ];
 
         masApps = {
-          "Microsoft Word" = 462054704;
-          "Microsoft Excel" = 462058435;
-          "Microsoft PowerPoint" = 462062816;
-          "Microsoft OneNote" = 784801555;
-          "OneDrive" = 823766827;
-          "Highlights" = 1498912833;
+          # New MAS needs sudo... not compatible
+          #"Microsoft Word" = 462054704;
+          #"Microsoft Excel" = 462058435;
+          #"Microsoft PowerPoint" = 462062816;
+          #"Microsoft OneNote" = 784801555;
+          #"OneDrive" = 823766827;
+          #"Highlights" = 1498912833;
         };
 
         onActivation.autoUpdate = true;
         onActivation.upgrade = true;
       };
 
+
       # Version pins
       system.configurationRevision = self.rev or self.dirtyRev or null;
       # Required by recent nix-darwin: primary login user
       system.primaryUser = "manug";
       system.stateVersion = 6; # nix-darwin versioning
+    };
+
+    linuxServerHomeModule = { pkgs, lib, ... }: {
+      home = {
+        username = "manug";
+        homeDirectory = "/home/manug";
+        stateVersion = "24.11";
+      };
+
+      targets.genericLinux.enable = true;
+      programs.home-manager.enable = true;
+
+      home.packages = with pkgs; [
+        git
+        gh
+        github-mcp-server
+        lazygit
+        vim
+        neovim
+        tree-sitter
+        fd
+        ripgrep
+        jq
+        imagemagick
+        pkg-config
+        wget
+        fastfetch
+        uv
+        nodejs_22
+        python3
+        python3Packages.jupytext
+        ghostscript
+        cargo
+        ffmpeg
+        opencode
+        claude-code
+      ];
+
+      home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
+      xdg.configFile."nvim".source = ./dotfiles/nvim;
+      xdg.configFile."lazygit/config.yml".source = ./dotfiles/lazygit/config.yml;
+
+      xdg.configFile."opencode/opencode.json".source = ./dotfiles/opencode/opencode.json;
+      xdg.configFile."opencode/system-prompt.md".source = ./dotfiles/opencode/system-prompt.md;
+      xdg.configFile."opencode/skills".source = ./dotfiles/opencode/skills;
+      xdg.configFile."opencode/themes".source = ./dotfiles/opencode/themes;
+
+      home.activation.openagents = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        if ! command -v openagents >/dev/null 2>&1 && [ ! -f "$HOME/.openagents/nodejs/node_modules/.bin/openagents" ]; then
+          echo "Installing OpenAgents..."
+          curl -fsSL https://openagents.org/install.sh | bash 2>/dev/null || true
+        fi
+      '';
+
+      programs.zsh = {
+        enable = true;
+        initContent = ''
+          # OpenAgents PATH
+          export PATH="$HOME/.openagents/nodejs/node_modules/.bin:$PATH"
+
+          # UV tools PATH
+          export PATH="$HOME/.local/bin:$PATH"
+
+          # GitHub MCP auth from gh CLI
+          if command -v gh >/dev/null 2>&1; then
+            _gh_pat="$(gh auth token 2>/dev/null || true)"
+            if [ -n "$_gh_pat" ]; then
+              export GITHUB_PAT="$_gh_pat"
+            fi
+            unset _gh_pat
+          fi
+        '';
+      };
     };
   in
   {
@@ -309,6 +385,21 @@
             };
           };
         }
+      ];
+    };
+
+    # Build with: home-manager switch --flake .#linux-server
+    homeConfigurations."linux-server" = home-manager.lib.homeManagerConfiguration {
+      pkgs = import nixpkgs {
+        system = "x86_64-linux";
+        config = {
+          allowUnfree = true;
+          allowBroken = false;
+        };
+      };
+
+      modules = [
+        linuxServerHomeModule
       ];
     };
   };

@@ -249,9 +249,9 @@ return {
           )
         end, { desc = "Install optional Molten python deps" })
       end
-      -- Display: use persistent inline virtual text per cell (notebook-like).
-      -- Disable output_virt_lines (float-window padding) — it fights with
-      -- virt_text_output and causes messy layout on batch runs.
+      -- Display: keep output inline, but make image previews smaller and shift
+      -- virtual output below the cell boundary so image padding is less likely
+      -- to visually collide with surrounding text.
       vim.g.molten_image_provider = "image.nvim"
       vim.g.molten_image_location = "virt"
 
@@ -259,7 +259,8 @@ return {
       vim.g.molten_output_virt_lines = false
       vim.g.molten_auto_open_output = false
 
-      vim.g.molten_cover_empty_lines = true
+      vim.g.molten_cover_empty_lines = false
+      vim.g.molten_virt_lines_off_by_1 = true
       vim.g.molten_wrap_output = true
 
       vim.g.molten_tick_rate = 150
@@ -306,6 +307,7 @@ return {
       vim.keymap.set("n", "<leader>jS", ":MoltenShowOutput<CR>", { desc = "Molten: show output" })
       vim.keymap.set("n", "<leader>jH", ":MoltenHideOutput<CR>", { desc = "Molten: hide output" })
       vim.keymap.set("n", "<leader>jK", ":MoltenInfo<CR>", { desc = "Molten: kernel info" })
+      vim.keymap.set("n", "<leader>jp", ":MoltenImagePopup<CR>", { desc = "Molten: open image externally" })
       vim.keymap.set("n", "<leader>jy", function()
         -- Enter output float, select all, yank to system clipboard, leave
         pcall(vim.cmd, "MoltenEnterOutput")
@@ -352,8 +354,10 @@ return {
           html = { enabled = true },
           css = { enabled = true },
         },
-        max_width = 300,
-        max_height = 300,
+        -- Keep inline previews compact; very tall images are where image.nvim
+        -- and molten's virtual output layout tend to fight each other.
+        max_width = 100,
+        max_height = 12,
         max_height_window_percentage = math.huge,
         max_width_window_percentage = math.huge,
         window_overlap_clear_enabled = true,

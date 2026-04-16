@@ -1,12 +1,15 @@
 -- Neovim >= 0.11.2 required by LazyVim 15.x; legacy health shim removed
 
--- Ensure Python provider (venv) is configured before plugins load
-pcall(function()
-  local py = require("config.python")
-  py.ensure_venv()
-  py.configure_provider()
-  py.prepend_venv_bin_to_path()
-end)
+-- Ensure Python provider (venv) is configured before plugins load.
+-- Skip on a remote-nvim host — no local python toolchain to bootstrap.
+if not vim.g.remote_neovim_host then
+  pcall(function()
+    local py = require("config.python")
+    py.ensure_venv()
+    py.configure_provider()
+    py.prepend_venv_bin_to_path()
+  end)
+end
 
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not (vim.uv or vim.loop).fs_stat(lazypath) then
