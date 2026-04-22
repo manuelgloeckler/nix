@@ -19,12 +19,20 @@
   },
   "mcp": {
     "github": {
-      "type": "remote",
-      "url": "https://api.githubcopilot.com/mcp/"
+      "type": "local",
+      "command": [
+        "/bin/sh",
+        "-lc",
+        "GITHUB_PERSONAL_ACCESS_TOKEN=\"$(gh auth token 2>/dev/null)\" exec github-mcp-server stdio"
+      ]
     },
     "github-readonly": {
-      "type": "remote",
-      "url": "https://api.githubcopilot.com/mcp/readonly"
+      "type": "local",
+      "command": [
+        "/bin/sh",
+        "-lc",
+        "GITHUB_PERSONAL_ACCESS_TOKEN=\"$(gh auth token 2>/dev/null)\" exec github-mcp-server stdio --read-only"
+      ]
     },
     "context7": {
       "type": "remote",

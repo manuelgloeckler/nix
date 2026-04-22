@@ -37,10 +37,18 @@ window-step-resize = true
 
 keybind = ctrl+n=new_window
 
+# Split nav (vim: <C-w>h/j/k/l). Ctrl+hjkl = move between panes.
 keybind = ctrl+h=goto_split:left
 keybind = ctrl+j=goto_split:bottom
 keybind = ctrl+k=goto_split:top
 keybind = ctrl+l=goto_split:right
+
+# Tab nav (vim: gT / gt, tmux: prefix+p/n). Ctrl+Shift+h/l = prev/next tab.
+# Rationale: Ctrl+hjkl already moves between splits; adding Shift keeps the
+# direction semantics but "jumps farther" (pane -> tab), matching vim's
+# lowercase/uppercase "bigger movement" convention.
+keybind = ctrl+shift+h=previous_tab
+keybind = ctrl+shift+l=next_tab
 # Close current split/tab/window (context-aware)
 keybind = ctrl+w=close_surface
 keybind = ctrl+a>t=close_tab
@@ -54,6 +62,43 @@ keybind = ctrl+a>f=toggle_split_zoom
 
 keybind = ctrl+a>n=next_tab
 keybind = ctrl+a>p=previous_tab
+
+# --- Vim-ish extensions -------------------------------------------------------
+# Convention: lowercase hjkl = move/create (existing), Shift+HJKL = resize.
+
+# New tab under the leader (mirrors close: ctrl+a>t)
+keybind = ctrl+a>c=new_tab
+
+# Jump directly to tab 1..9 (vim: `1gt`; tmux: prefix+<number>)
+keybind = ctrl+a>1=goto_tab:1
+keybind = ctrl+a>2=goto_tab:2
+keybind = ctrl+a>3=goto_tab:3
+keybind = ctrl+a>4=goto_tab:4
+keybind = ctrl+a>5=goto_tab:5
+keybind = ctrl+a>6=goto_tab:6
+keybind = ctrl+a>7=goto_tab:7
+keybind = ctrl+a>8=goto_tab:8
+keybind = ctrl+a>9=goto_tab:9
+
+# Move current tab left/right (vim: `:tabmove -1` / `+1`; tmux: `{` / `}`)
+keybind = ctrl+a>shift+comma=move_tab:-1
+keybind = ctrl+a>shift+period=move_tab:1
+
+# Resize current split (vim: <C-w>+/-/</>). Using Shift+HJKL under the leader
+# so lowercase hjkl remains "new split in direction".
+keybind = ctrl+a>shift+h=resize_split:left,10
+keybind = ctrl+a>shift+j=resize_split:down,5
+keybind = ctrl+a>shift+k=resize_split:up,5
+keybind = ctrl+a>shift+l=resize_split:right,10
+
+# Equalize all splits (vim: <C-w>=)
+keybind = ctrl+a>equal=equalize_splits
+
+# Scrollback motion (vim: <C-u>, <C-d>, gg, G)
+keybind = ctrl+a>u=scroll_page_fractional:-0.5
+keybind = ctrl+a>d=scroll_page_fractional:0.5
+keybind = ctrl+a>g=scroll_to_top
+keybind = ctrl+a>shift+g=scroll_to_bottom
 
 keybind = super+r=reload_config
 

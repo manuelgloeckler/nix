@@ -307,7 +307,132 @@ return {
       vim.keymap.set("n", "<leader>jS", ":MoltenShowOutput<CR>", { desc = "Molten: show output" })
       vim.keymap.set("n", "<leader>jH", ":MoltenHideOutput<CR>", { desc = "Molten: hide output" })
       vim.keymap.set("n", "<leader>jK", ":MoltenInfo<CR>", { desc = "Molten: kernel info" })
-      vim.keymap.set("n", "<leader>jp", ":MoltenImagePopup<CR>", { desc = "Molten: open image externally" })
+      -- <leader>jp: open the current cell's image in a big in-terminal nvim
+      -- float via image.nvim. Preferred over :MoltenImagePopup because that
+      -- uses PIL's Image.show(), which on macOS shells out to `open` and
+      -- spawns a new Preview.app window (annoying, steals focus, lands on a
+      -- random display). Since molten already renders the image inline via
+      -- image.nvim, we can just grab the same file and render it bigger in a
+      -- scratch float — no OS windows involved.
+      local function molten_image_popup_float()
+        local ok_img, image = pcall(require, "image")
+        if not ok_img then
+          vim.notify("jp: image.nvim not available, falling back to MoltenImagePopup", vim.log.levels.WARN)
+          pcall(vim.cmd, "MoltenImagePopup")
+          return
+        end
+        local buf = vim.api.nvim_get_current_buf()
+        local cur_row = vim.api.nvim_win_get_cursor(0)[1] -- 1-indexed
+        local images = image.get_images({ buffer = buf }) or {}
+        if #images == 0 then
+          vim.notify("jp: no image outputs in this buffer", vim.log.levels.WARN)
+          return
+        end
+
+        -- image.nvim geometry.y is the 0-indexed line where the image begins.
+        -- Prefer the nearest image at-or-after the cursor; otherwise fall back
+        -- to the last one before it.
+        table.sort(images, function(a, b) return (a.geometry.y or 0) < (b.geometry.y or 0) end)
+        local target
+        for _, img in ipairs(images) do
+          local y = (img.geometry and img.geometry.y) or 0
+          if y + 1 >= cur_row then target = img; break end
+        end
+        target = target or images[#images]
+
+        local path = target.original_path or target.path
+        if not path or vim.fn.filereadable(path) == 0 then
+          vim.notify("jp: image file unavailable: " .. tostring(path), vim.log.levels.WARN)
+          return
+        end
+
+        -- Size the float to the image's *natural* size in terminal cells,
+        -- capped so it never exceeds ~90% of the editor. Natural size comes
+        -- from the source's pixel dimensions divided by the terminal's cell
+        -- pixel size; image.nvim already cached image_width/image_height on
+        -- the inline preview, so we reuse those rather than re-probing.
+        local term_ok, term_utils = pcall(require, "image.utils.term")
+        local term_size = term_ok and term_utils.get_size() or nil
+        local cell_w = (term_size and term_size.cell_width > 0) and term_size.cell_width or 10
+        local cell_h = (term_size and term_size.cell_height > 0) and term_size.cell_height or 20
+
+        local img_px_w = target.image_width or 0
+        local img_px_h = target.image_height or 0
+
+        local screen_cols, screen_rows = vim.o.columns, vim.o.lines
+        -- Upper bounds: ~90% of screen, minus 2 for border and 1 for title.
+        local max_content_w = math.max(10, math.floor(screen_cols * 0.9) - 2)
+        local max_content_h = math.max(6,  math.floor(screen_rows * 0.9) - 2)
+
+        -- Natural cell dims. If image dims are missing (shouldn't happen for
+        -- already-rendered images, but be defensive), fall back to the cap.
+        local natural_w = (img_px_w > 0) and math.ceil(img_px_w / cell_w) or max_content_w
+        local natural_h = (img_px_h > 0) and math.ceil(img_px_h / cell_h) or max_content_h
+
+        -- Fit-to-cap while preserving aspect ratio. Only shrinks; small images
+        -- stay at their native size so we don't upscale beyond the source.
+        local content_w, content_h = natural_w, natural_h
+        if content_w > max_content_w or content_h > max_content_h then
+          local scale = math.min(max_content_w / content_w, max_content_h / content_h)
+          content_w = math.max(1, math.floor(content_w * scale))
+          content_h = math.max(1, math.floor(content_h * scale))
+        end
+
+        local win_w = content_w + 2  -- +2 for the rounded border
+        local win_h = content_h + 2
+        local fbuf = vim.api.nvim_create_buf(false, true)
+        vim.bo[fbuf].bufhidden = "wipe"
+        local fwin = vim.api.nvim_open_win(fbuf, true, {
+          relative = "editor",
+          width = win_w,
+          height = win_h,
+          row = math.floor((screen_rows - win_h) / 2),
+          col = math.floor((screen_cols - win_w) / 2),
+          style = "minimal",
+          border = "rounded",
+          title = " " .. vim.fn.fnamemodify(path, ":t") .. " (q to close) ",
+          title_pos = "center",
+        })
+
+        local popup_img = image.from_file(path, {
+          window = fwin,
+          buffer = fbuf,
+          x = 0,
+          y = 0,
+          width = content_w,
+          height = content_h,
+          with_virtual_padding = false,
+          inline = true,
+        })
+        if popup_img then
+          -- Bypass the global max_width / max_height clamps we set for the
+          -- inline preview (see image.nvim opts: max_width = 100, max_height
+          -- = 12). Without this flag the popup would be re-resized down to
+          -- the same tiny preview dimensions instead of rendering at the
+          -- float's full size — which is exactly the "low-res in the popup"
+          -- bug. The clamp is skipped per-image in renderer.lua when
+          -- `ignore_global_max_size = true`.
+          popup_img.ignore_global_max_size = true
+          pcall(popup_img.render, popup_img)
+        end
+
+        local function close()
+          if popup_img then pcall(popup_img.clear, popup_img) end
+          if vim.api.nvim_win_is_valid(fwin) then vim.api.nvim_win_close(fwin, true) end
+        end
+        vim.keymap.set("n", "q",     close, { buffer = fbuf, nowait = true, silent = true })
+        vim.keymap.set("n", "<Esc>", close, { buffer = fbuf, nowait = true, silent = true })
+        -- Also close if the float loses focus (matches MoltenEnterOutput ergonomics).
+        vim.api.nvim_create_autocmd("WinLeave", {
+          buffer = fbuf,
+          once = true,
+          callback = close,
+        })
+      end
+      vim.keymap.set("n", "<leader>jp", molten_image_popup_float,
+        { desc = "Molten: image popup (in-terminal float)" })
+      vim.keymap.set("n", "<leader>jP", ":MoltenImagePopup<CR>",
+        { desc = "Molten: image popup (external app, fallback)" })
       vim.keymap.set("n", "<leader>jy", function()
         -- Enter output float, select all, yank to system clipboard, leave
         pcall(vim.cmd, "MoltenEnterOutput")
