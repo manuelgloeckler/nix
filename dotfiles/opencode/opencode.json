@@ -10,6 +10,10 @@
     "opencode-pollinations-plugin",
     "@bdliyq/opencode-rate-limit-retry@latest"
   ],
+  "tools": {
+    "websearch": true,
+    "codesearch": true
+  },
   "permission": {
     "external_directory": "allow",
     "bash": "allow",

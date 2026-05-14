@@ -1,47 +1,21 @@
--- Set Catppuccin as the default colorscheme
+-- Set Ayu (dark) as the default colorscheme
 return {
-  -- Tell LazyVim to use catppuccin
+  -- Tell LazyVim to use ayu-dark
   {
     "LazyVim/LazyVim",
     opts = {
-      colorscheme = "catppuccin",
+      colorscheme = "ayu-dark",
     },
   },
 
-  -- Catppuccin theme with common integrations
   {
-    "catppuccin/nvim",
-    name = "catppuccin",
+    "Shatur/neovim-ayu",
+    name = "ayu",
     priority = 1000,
     opts = {
-      flavour = "mocha", -- latte, frappe, macchiato, mocha
-      transparent_background = false,
-      integrations = {
-        treesitter = true,
-        gitsigns = true,
-        telescope = true,
-        which_key = true,
-        cmp = true,
-        dap = true,
-        nvimtree = true,
-        markdown = true,
-        native_lsp = {
-          enabled = true,
-          virtual_text = {
-            errors = { "italic" },
-            hints = { "italic" },
-            warnings = { "italic" },
-            information = { "italic" },
-          },
-          underlines = {
-            errors = { "undercurl" },
-            hints = { "undercurl" },
-            warnings = { "undercurl" },
-            information = { "undercurl" },
-          },
-        },
-      },
+      mirage = false,
+      terminal = true,
+      overrides = {},
     },
   },
 }
-

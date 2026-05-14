@@ -1,0 +1,43 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "enableAllProjectMcpServers": true,
+  "permissions": {
+    "defaultMode": "bypassPermissions",
+    "additionalDirectories": [
+      "~",
+      "/tmp",
+      "/var/tmp"
+    ],
+    "allow": [
+      "Agent",
+      "Bash",
+      "Edit",
+      "ExitPlanMode",
+      "Glob",
+      "Grep",
+      "KillShell",
+      "LSP",
+      "Monitor",
+      "NotebookEdit",
+      "Read",
+      "Skill",
+      "TaskCreate",
+      "TaskGet",
+      "TaskList",
+      "TaskOutput",
+      "TaskStop",
+      "TaskUpdate",
+      "TodoWrite",
+      "ToolSearch",
+      "WebFetch",
+      "WebSearch",
+      "Write",
+      "mcp__*"
+    ],
+    "deny": []
+  },
+  "env": {
+    "CLAUDE_CODE_GLOB_HIDDEN": "true",
+    "MAX_MCP_OUTPUT_TOKENS": "50000"
+  }
+}

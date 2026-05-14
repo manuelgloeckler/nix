@@ -48,20 +48,73 @@ end
 -- runtime; neither works out-of-the-box because Nix doesn't place .pc files
 -- or dylibs on standard search paths.
 -- Skip on remote-nvim hosts — image.nvim/molten aren't shipped there.
+--
+-- IM 7.x removed `magick --prefix`, so we resolve the runtime prefix by
+-- following the symlink chain from the binary instead. The .pc files live
+-- in a separate `imagemagick-*-dev` Nix output (declared in flake.nix);
+-- we glob /nix/store for the matching version.
 if not vim.g.remote_neovim_host and vim.fn.executable("magick") == 1 then
-  local prefix = vim.fn.trim(vim.fn.system("magick --prefix"))
-  if vim.v.shell_error == 0 and prefix ~= "" then
-    -- Build-time: pkg-config needs to find MagickWand.pc
-    local pc_dir = prefix .. "/lib/pkgconfig"
-    if vim.fn.isdirectory(pc_dir) == 1 then
+  local bin = vim.fn.exepath("magick")
+  local resolved = vim.fn.resolve(bin)
+  -- /nix/store/HASH-imagemagick-VERSION/bin/magick → /nix/store/HASH-imagemagick-VERSION
+  local runtime_prefix = vim.fn.fnamemodify(resolved, ":h:h")
+
+  -- Runtime: ffi.load needs libMagickWand on the dyld search path
+  local lib_dir = runtime_prefix .. "/lib"
+  if vim.fn.isdirectory(lib_dir) == 1 then
+    local existing = vim.env.DYLD_LIBRARY_PATH or ""
+    vim.env.DYLD_LIBRARY_PATH = lib_dir .. (existing ~= "" and (":" .. existing) or "")
+  end
+
+  -- macOS: the magick LuaRock does `ffi.load("MagickWand")`, which dlopen
+  -- translates to libMagickWand.dylib (bare name). Nix's imagemagick only
+  -- ships the variant-suffixed file (libMagickWand-7.Q16HDRI.dylib) — no
+  -- bare-name symlink — so the load fails. Build a shim directory with
+  -- bare-name symlinks and prepend it to DYLD_LIBRARY_PATH.
+  if vim.fn.has("mac") == 1 and vim.fn.isdirectory(lib_dir) == 1 then
+    local shim_dir = vim.fn.stdpath("cache") .. "/magick-shim"
+    vim.fn.mkdir(shim_dir, "p")
+    for _, name in ipairs({ "MagickWand", "MagickCore" }) do
+      local matches = vim.fn.glob(lib_dir .. "/lib" .. name .. "-*.dylib", false, true)
+      -- Prefer the unversioned variant (libMagickWand-7.Q16HDRI.dylib) over
+      -- the soversion-suffixed alias (libMagickWand-7.Q16HDRI.10.dylib).
+      local target
+      for _, m in ipairs(matches) do
+        if not vim.fn.fnamemodify(m, ":t"):match("%.%d+%.dylib$") then
+          target = m
+          break
+        end
+      end
+      target = target or matches[1]
+      if target then
+        local link = shim_dir .. "/lib" .. name .. ".dylib"
+        if vim.fn.filereadable(link) ~= 1 then
+          pcall((vim.uv or vim.loop).fs_symlink, target, link)
+        end
+      end
+    end
+    local existing = vim.env.DYLD_LIBRARY_PATH or ""
+    if not existing:find(shim_dir, 1, true) then
+      vim.env.DYLD_LIBRARY_PATH = shim_dir .. (existing ~= "" and (":" .. existing) or "")
+    end
+  end
+
+  -- Build-time: pkg-config needs MagickWand.pc, which lives in the dev output.
+  -- Try the runtime prefix first (some platforms co-locate .pc files), then
+  -- fall back to scanning the Nix store for a matching `-dev` output.
+  local pc_candidates = { runtime_prefix .. "/lib/pkgconfig" }
+  local version = (resolved:match("imagemagick%-([%d%.%-]+)/bin/magick$") or ""):gsub("%-$", "")
+  if version ~= "" then
+    local hits = vim.fn.glob("/nix/store/*-imagemagick-" .. version .. "-dev/lib/pkgconfig", false, true)
+    for _, p in ipairs(hits) do
+      pc_candidates[#pc_candidates + 1] = p
+    end
+  end
+  for _, pc_dir in ipairs(pc_candidates) do
+    if vim.fn.filereadable(pc_dir .. "/MagickWand.pc") == 1 then
       local existing = vim.env.PKG_CONFIG_PATH or ""
       vim.env.PKG_CONFIG_PATH = pc_dir .. (existing ~= "" and (":" .. existing) or "")
-    end
-    -- Runtime: ffi.load needs the shared library on macOS
-    local lib_dir = prefix .. "/lib"
-    if vim.fn.isdirectory(lib_dir) == 1 then
-      local existing = vim.env.DYLD_LIBRARY_PATH or ""
-      vim.env.DYLD_LIBRARY_PATH = lib_dir .. (existing ~= "" and (":" .. existing) or "")
+      break
     end
   end
 end

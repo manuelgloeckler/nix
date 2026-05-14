@@ -253,14 +253,32 @@ return {
       -- virtual output below the cell boundary so image padding is less likely
       -- to visually collide with surrounding text.
       vim.g.molten_image_provider = "image.nvim"
-      vim.g.molten_image_location = "virt"
+      -- Render images in a float instead of inline-virt. With `virt`,
+      -- images anchor to the virt_text output line and overlap any text
+      -- output produced by the same cell (`print(...)` + `plot(...)`).
+      -- Floating images sidestep that collision while still appearing
+      -- automatically when a cell produces image output.
+      vim.g.molten_image_location = "float"
 
       vim.g.molten_virt_text_output = true
-      vim.g.molten_output_virt_lines = false
+      -- Reserve real virtual-line space below the cell so the next `# %%` cell
+      -- (and any inline image placed via image.nvim's "virt" location) cannot
+      -- render on top of the output.
+      vim.g.molten_output_virt_lines = true
+      -- Don't auto-open the output float. Inline `virt_text_output` already
+      -- shows the short text preview on the cell's last line; the full
+      -- output (including image) is opt-in via <leader>jo.
       vim.g.molten_auto_open_output = false
 
-      vim.g.molten_cover_empty_lines = false
-      vim.g.molten_virt_lines_off_by_1 = true
+      -- Cover the empty padding lines between cells so molten's reserved
+      -- virtual-line block extends through them — otherwise an image that
+      -- spills past the cell's last code line lands on the empty separator
+      -- line and visually collides with the next cell's marker.
+      vim.g.molten_cover_empty_lines = true
+      -- Keep this false: with cover_empty_lines + output_virt_lines on, the
+      -- +1 shift bumps output past the cell boundary so it renders attached
+      -- to the *next* cell's `# %%` marker instead of below the current cell.
+      vim.g.molten_virt_lines_off_by_1 = false
       vim.g.molten_wrap_output = true
 
       vim.g.molten_tick_rate = 150
@@ -274,6 +292,14 @@ return {
       vim.g.molten_output_win_style = "minimal"
       vim.g.molten_output_win_border = { "", "━", "", "", "", "━", "", "" }
       vim.g.molten_output_win_cover_gutter = false
+      -- Expose the full output as a scrollable buffer instead of clipping at
+      -- max_height. Required for the "enter, select, yank" workflow on long
+      -- outputs (stack traces, big dataframes).
+      vim.g.molten_output_show_more = true
+      -- Ephemeral float: collapses the moment focus moves away. Re-opening
+      -- another cell's output requires <leader>jo again, which is the
+      -- intended on-demand workflow.
+      vim.g.molten_output_win_hide_on_leave = true
     end,
     config = function()
       -- Handy keymaps (change <leader>j to taste)
@@ -292,20 +318,42 @@ return {
       vim.keymap.set("n", "<leader>jc", ":MoltenReevaluateCell<CR>", { desc = "Molten: rerun cell" })
       vim.keymap.set("n", "<leader>jo", function()
         vim.cmd("MoltenEnterOutput")
-        -- Once inside the output float, map `q` to leave it
+        -- Once inside the output float, set up buffer-local keymaps so it
+        -- feels like a normal scratch buffer: q/<Esc> to leave, Y to yank
+        -- everything to the system clipboard. Visual selection / yank work
+        -- without any special handling — the buffer is a regular nvim buffer.
         vim.schedule(function()
           local win = vim.api.nvim_get_current_win()
           local cfg = vim.api.nvim_win_get_config(win)
-          if cfg.relative and cfg.relative ~= "" then
-            vim.keymap.set("n", "q", "<cmd>wincmd p<CR>", { buffer = 0, nowait = true, desc = "Leave output float" })
-          end
+          if not (cfg.relative and cfg.relative ~= "") then return end
+          local bufnr = vim.api.nvim_win_get_buf(win)
+          local opts = { buffer = bufnr, nowait = true, silent = true }
+          vim.keymap.set("n", "q",     "<cmd>wincmd p<CR>", vim.tbl_extend("force", opts, { desc = "Leave output float" }))
+          vim.keymap.set("n", "<Esc>", "<cmd>wincmd p<CR>", vim.tbl_extend("force", opts, { desc = "Leave output float" }))
+          vim.keymap.set("n", "Y", function()
+            local lines = vim.api.nvim_buf_get_lines(bufnr, 0, -1, false)
+            vim.fn.setreg("+", table.concat(lines, "\n"))
+            vim.notify("Yanked " .. #lines .. " lines to clipboard", vim.log.levels.INFO)
+          end, vim.tbl_extend("force", opts, { desc = "Yank all output to clipboard" }))
         end)
-      end, { desc = "Molten: focus output (q to leave)" })
+      end, { desc = "Molten: focus output (q/Esc to leave, Y yank all)" })
       vim.keymap.set("n", "<leader>jd", ":MoltenDelete<CR>", { desc = "Molten: clear cell/output" })
       vim.keymap.set("n", "<leader>jR", ":MoltenRestart<CR>", { desc = "Molten: restart kernel" })
       vim.keymap.set("n", "<leader>jI", ":MoltenInterrupt<CR>", { desc = "Molten: interrupt kernel" })
       vim.keymap.set("n", "<leader>jS", ":MoltenShowOutput<CR>", { desc = "Molten: show output" })
       vim.keymap.set("n", "<leader>jH", ":MoltenHideOutput<CR>", { desc = "Molten: hide output" })
+      -- Toggle: hide the float if it's currently shown for this cell, else
+      -- show it. Tracks per-buffer so each notebook has independent state.
+      vim.keymap.set("n", "<leader>jt", function()
+        local b = vim.api.nvim_get_current_buf()
+        if vim.b[b].molten_output_visible then
+          pcall(vim.cmd, "MoltenHideOutput")
+          vim.b[b].molten_output_visible = false
+        else
+          pcall(vim.cmd, "MoltenShowOutput")
+          vim.b[b].molten_output_visible = true
+        end
+      end, { desc = "Molten: toggle output visibility" })
       vim.keymap.set("n", "<leader>jK", ":MoltenInfo<CR>", { desc = "Molten: kernel info" })
       -- <leader>jp: open the current cell's image in a big in-terminal nvim
       -- float via image.nvim. Preferred over :MoltenImagePopup because that
@@ -479,14 +527,20 @@ return {
           html = { enabled = true },
           css = { enabled = true },
         },
-        -- Keep inline previews compact; very tall images are where image.nvim
-        -- and molten's virtual output layout tend to fight each other.
-        max_width = 100,
-        max_height = 12,
+        -- Sized for molten's output float (max_height = 50 rows). Since we
+        -- no longer render images inline (molten_image_location = "float"),
+        -- the previous compact caps (100×12) were under-using the float and
+        -- producing low-res previews. These match the float's available area.
+        max_width = 200,
+        max_height = 48,
         max_height_window_percentage = math.huge,
         max_width_window_percentage = math.huge,
         window_overlap_clear_enabled = true,
         window_overlap_clear_ft_ignore = { "cmp_menu", "cmp_docs", "" },
+        -- Drop zombie images when nvim isn't the focused editor window
+        -- (tmux/ghostty pane switch, app focus loss). Without this, kitty
+        -- keeps the pixmap on screen against stale text.
+        editor_only_render_when_focused = true,
       })
     end,
     config = function(_, opts)
@@ -581,7 +635,7 @@ return {
           local winid = tonumber(au.file)
           if not winid or not vim.api.nvim_win_is_valid(winid) then return end
           scroll_timer:stop()
-          scroll_timer:start(200, 0, vim.schedule_wrap(function()
+          scroll_timer:start(100, 0, vim.schedule_wrap(function()
             if not vim.api.nvim_win_is_valid(winid) then return end
             local images = image.get_images({ window = winid })
             for _, img in ipairs(images) do
@@ -628,6 +682,28 @@ return {
               img:clear()
             end
           end)
+        end,
+      })
+
+      -- --- 5) CursorHold safety net -----------------------------------------
+      -- After the cursor settles, force-render any images in the current
+      -- window. Catches the "scrolled off and back, image never came back"
+      -- case where the WinScrolled debounce missed the final position.
+      -- Only fires when the cursor stops moving for `updatetime` (default 4s,
+      -- LazyVim sets ~200ms), so it's effectively free.
+      vim.api.nvim_create_autocmd({ "CursorHold", "CursorHoldI" }, {
+        group = grp,
+        callback = function()
+          if not image.is_enabled() then return end
+          local winid = vim.api.nvim_get_current_win()
+          if not vim.api.nvim_win_is_valid(winid) then return end
+          local images = image.get_images({ window = winid })
+          for _, img in ipairs(images) do
+            local buf_ok, buf_valid = pcall(vim.api.nvim_buf_is_valid, img.buffer)
+            if buf_ok and buf_valid and vim.api.nvim_win_get_buf(winid) == img.buffer then
+              pcall(img.render, img)
+            end
+          end
         end,
       })
     end,

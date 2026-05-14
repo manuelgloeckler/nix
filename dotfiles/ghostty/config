@@ -11,7 +11,8 @@ scrollback-limit = 1000000
 copy-on-select = true
 
 # Theme name must exactly match a file in ~/.config/ghostty/themes/
-# theme = catppuccin-mocha 
+# (or a built-in theme — `ghostty +list-themes` to browse)
+theme = Ayu
 
 # Subtle transparency & blur (macOS)
 background-opacity = 0.92
@@ -49,6 +50,11 @@ keybind = ctrl+l=goto_split:right
 # lowercase/uppercase "bigger movement" convention.
 keybind = ctrl+shift+h=previous_tab
 keybind = ctrl+shift+l=next_tab
+
+# Single-shot tab switch (overrides macOS Cmd+H "Hide Application" inside
+# ghostty — intentional trade for two-finger tab nav).
+keybind = super+h=previous_tab
+keybind = super+l=next_tab
 # Close current split/tab/window (context-aware)
 keybind = ctrl+w=close_surface
 keybind = ctrl+a>t=close_tab

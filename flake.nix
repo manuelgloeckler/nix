@@ -50,6 +50,7 @@
         ripgrep 
         jq 
         imagemagick
+        imagemagick.dev   # ships MagickWand.pc — needed for the magick LuaRock that image.nvim builds against
         pkg-config
         obsidian 
         vscode 
@@ -66,6 +67,8 @@
         macmon 
         opencode
         claude-code
+        texpresso   # live LaTeX renderer; pairs with let-def/texpresso.vim in nvim
+        tectonic    # single-binary TeX engine texpresso uses to actually compile (no system TeX needed)
       ];
 
       # Enable flakes & nix-command
@@ -219,6 +222,7 @@
         ripgrep
         jq
         imagemagick
+        imagemagick.dev   # ships MagickWand.pc — needed for the magick LuaRock that image.nvim builds against
         pkg-config
         wget
         fastfetch
@@ -231,6 +235,8 @@
         ffmpeg
         opencode
         claude-code
+        texpresso   # live LaTeX renderer; pairs with let-def/texpresso.vim in nvim
+        texlive.combined.scheme-medium   # Linux box has no basictex, give texpresso a real TeX install
       ];
 
       home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
@@ -241,6 +247,49 @@
       xdg.configFile."opencode/system-prompt.md".source = ./dotfiles/opencode/system-prompt.md;
       xdg.configFile."opencode/skills".source = ./dotfiles/opencode/skills;
       xdg.configFile."opencode/themes".source = ./dotfiles/opencode/themes;
+
+      home.file.".claude/CLAUDE.md".source = ./dotfiles/claude/CLAUDE.md;
+
+      home.activation.claudeCodeConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        settings_json="$HOME/.claude/settings.json"
+        claude_json="$HOME/.claude.json"
+        tmp="$(${pkgs.coreutils}/bin/mktemp)"
+        mkdir -p "$HOME/.claude"
+
+        if [ ! -f "$settings_json" ]; then
+          printf '{}\n' > "$settings_json"
+        fi
+
+        if ${pkgs.jq}/bin/jq --slurpfile settings ${./dotfiles/claude/settings.json} '
+          .enableAllProjectMcpServers = $settings[0].enableAllProjectMcpServers |
+          .permissions = (.permissions // {}) |
+          .permissions.defaultMode = $settings[0].permissions.defaultMode |
+          .permissions.additionalDirectories = (((.permissions.additionalDirectories // []) + ($settings[0].permissions.additionalDirectories // [])) | unique) |
+          .permissions.allow = (((.permissions.allow // []) + ($settings[0].permissions.allow // [])) | unique) |
+          .permissions.deny = $settings[0].permissions.deny |
+          .env = ((.env // {}) * ($settings[0].env // {}))
+        ' "$settings_json" > "$tmp"; then
+          mv "$tmp" "$settings_json"
+        else
+          rm -f "$tmp"
+          echo "Skipping Claude Code settings merge: $settings_json is not valid JSON" >&2
+        fi
+
+        tmp="$(${pkgs.coreutils}/bin/mktemp)"
+
+        if [ ! -f "$claude_json" ]; then
+          printf '{}\n' > "$claude_json"
+        fi
+
+        if ${pkgs.jq}/bin/jq --slurpfile mcp ${./dotfiles/claude/mcp.json} '
+          .mcpServers = ((.mcpServers // {}) * ($mcp[0].mcpServers // {}))
+        ' "$claude_json" > "$tmp"; then
+          mv "$tmp" "$claude_json"
+        else
+          rm -f "$tmp"
+          echo "Skipping Claude Code MCP merge: $claude_json is not valid JSON" >&2
+        fi
+      '';
 
       home.activation.openagents = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         if ! command -v openagents >/dev/null 2>&1 && [ ! -f "$HOME/.openagents/nodejs/node_modules/.bin/openagents" ]; then
@@ -348,6 +397,50 @@
               xdg.configFile."opencode/system-prompt.md".source = ./dotfiles/opencode/system-prompt.md;
               xdg.configFile."opencode/skills".source = ./dotfiles/opencode/skills;
               xdg.configFile."opencode/themes".source = ./dotfiles/opencode/themes;
+
+              # Claude Code config
+              home.file.".claude/CLAUDE.md".source = ./dotfiles/claude/CLAUDE.md;
+
+              home.activation.claudeCodeConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                settings_json="$HOME/.claude/settings.json"
+                claude_json="$HOME/.claude.json"
+                tmp="$(${pkgs.coreutils}/bin/mktemp)"
+                mkdir -p "$HOME/.claude"
+
+                if [ ! -f "$settings_json" ]; then
+                  printf '{}\n' > "$settings_json"
+                fi
+
+                if ${pkgs.jq}/bin/jq --slurpfile settings ${./dotfiles/claude/settings.json} '
+                  .enableAllProjectMcpServers = $settings[0].enableAllProjectMcpServers |
+                  .permissions = (.permissions // {}) |
+                  .permissions.defaultMode = $settings[0].permissions.defaultMode |
+                  .permissions.additionalDirectories = (((.permissions.additionalDirectories // []) + ($settings[0].permissions.additionalDirectories // [])) | unique) |
+                  .permissions.allow = (((.permissions.allow // []) + ($settings[0].permissions.allow // [])) | unique) |
+                  .permissions.deny = $settings[0].permissions.deny |
+                  .env = ((.env // {}) * ($settings[0].env // {}))
+                ' "$settings_json" > "$tmp"; then
+                  mv "$tmp" "$settings_json"
+                else
+                  rm -f "$tmp"
+                  echo "Skipping Claude Code settings merge: $settings_json is not valid JSON" >&2
+                fi
+
+                tmp="$(${pkgs.coreutils}/bin/mktemp)"
+
+                if [ ! -f "$claude_json" ]; then
+                  printf '{}\n' > "$claude_json"
+                fi
+
+                if ${pkgs.jq}/bin/jq --slurpfile mcp ${./dotfiles/claude/mcp.json} '
+                  .mcpServers = ((.mcpServers // {}) * ($mcp[0].mcpServers // {}))
+                ' "$claude_json" > "$tmp"; then
+                  mv "$tmp" "$claude_json"
+                else
+                  rm -f "$tmp"
+                  echo "Skipping Claude Code MCP merge: $claude_json is not valid JSON" >&2
+                fi
+              '';
 
               home.activation.openagents = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
                 if ! command -v openagents >/dev/null 2>&1 && [ ! -f "$HOME/.openagents/nodejs/node_modules/.bin/openagents" ]; then

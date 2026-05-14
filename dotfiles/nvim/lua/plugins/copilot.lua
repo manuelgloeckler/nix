@@ -9,6 +9,10 @@ return {
       opts.suggestion = vim.tbl_deep_extend("force", opts.suggestion or {}, {
         auto_trigger = true,
         debounce = 300,
+        -- Keep the multi-line ghost text visible while blink.cmp's menu is
+        -- open, so we can compare popup completions against the inline preview
+        -- instead of one hiding the other.
+        hide_during_completion = false,
       })
       opts.filetypes = vim.tbl_deep_extend("force", opts.filetypes or {}, {
         markdown = false,
@@ -51,6 +55,14 @@ return {
         mode = { "n", "i" },
       },
       {
+        "<M-CR>",
+        function()
+          require("copilot.suggestion").accept()
+        end,
+        desc = "AI: Accept Full Suggestion",
+        mode = "i",
+      },
+      {
         "<M-w>",
         function()
           require("copilot.suggestion").accept_word()
@@ -83,6 +95,26 @@ return {
     optional = true,
     dependencies = { "fang2hou/blink-copilot" },
     opts = function(_, opts)
+      -- Tab: accept Copilot ghost text if visible, else accept blink's
+      -- selected/highlighted item, else jump in snippet, else fall through.
+      -- S-Tab: snippet backward, else fall through.
+      opts.keymap = vim.tbl_deep_extend("force", opts.keymap or {}, {
+        preset = "super-tab",
+        ["<Tab>"] = {
+          function()
+            local ok, copilot = pcall(require, "copilot.suggestion")
+            if ok and copilot.is_visible and copilot.is_visible() then
+              copilot.accept()
+              return true
+            end
+          end,
+          "select_and_accept",
+          "snippet_forward",
+          "fallback",
+        },
+        ["<S-Tab>"] = { "snippet_backward", "fallback" },
+      })
+
       -- Prefer Copilot when it's confident and show a few strong options
       opts.sources = opts.sources or {}
       opts.sources.default = { "copilot", "lsp", "path", "snippets", "buffer" }

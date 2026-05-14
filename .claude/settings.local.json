@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "WebFetch(domain:github.com)",
+      "Bash(tar czf:*)",
+      "Bash(luac -p /Users/manug/.config/nix/dotfiles/nvim/lua/plugins/remote.lua)",
+      "Bash(nvim -l -e 'dofile\\(\"/Users/manug/.config/nix/dotfiles/nvim/lua/plugins/remote.lua\"\\)')",
+      "Read(//private/tmp/**)",
+      "Bash(rm -rf tartest)",
+      "Bash(mkdir -p tartest/lua/plugins tartest/lua/config)",
+      "Bash(touch tartest/init.lua tartest/lua/plugins/jupyter.lua tartest/lua/plugins/git.lua tartest/lua/config/options.lua)",
+      "Bash(tar tzf:*)",
+      "Bash(luac -p /Users/manug/.config/nix/dotfiles/nvim/init.lua /Users/manug/.config/nix/dotfiles/nvim/lua/config/lazy.lua /Users/manug/.config/nix/dotfiles/nvim/lua/plugins/remote.lua)",
+      "Bash(nvim --headless -l /Users/manug/.config/nix/dotfiles/nvim/lua/plugins/remote.lua)",
+      "Bash(ls /tmp/molten*)",
+      "Bash(luac -p /Users/manug/.config/nix/dotfiles/nvim/lua/plugins/jupyter.lua)",
+      "Bash(ghostty +list-themes)",
+      "Read(//nix/store/wpzigcx7gxjlwwp37zarhvd3bqa80b8c-imagemagick-7.1.2-19/lib/**)",
+      "Read(//Users/manug/.local/share/nvim/lazy-rocks/**)",
+      "Read(//Users/manug/.local/share/nvim/**)",
+      "Read(//Users/manug/.cache/nvim/magick-shim/**)",
+      "Bash(/run/current-system/sw/bin/nvim --clean --headless -c 'lua local ok, err = pcall\\(require, \"ffi\"\\); if ok then local lib_ok, lib_err = pcall\\(function\\(\\) return require\\(\"ffi\"\\).load\\(\"MagickWand\"\\) end\\); print\\(\"ffi.load:\", lib_ok, lib_err\\) else print\\(\"no ffi\"\\) end' -c qa)",
+      "Bash(/run/current-system/sw/bin/nvim --headless -c 'lua local ok, err = pcall\\(require, \"magick\"\\); print\\(\"magick load:\", ok, err\\); print\\(\"DYLD:\", vim.env.DYLD_LIBRARY_PATH\\)' -c 'qa')",
+      "Bash(/run/current-system/sw/bin/nvim --headless -c 'Lazy load image.nvim' -c 'lua local ok, err = pcall\\(require, \"magick\"\\); print\\(\"magick:\", ok, err\\)' -c 'qa')",
+      "Bash(/run/current-system/sw/bin/nvim --headless -c 'Lazy load image.nvim' -c 'lua print\\(\"path:\", package.path:gsub\\(\";\", \"\\\\n  \"\\)\\); print\\(\"---\"\\); print\\(\"cpath:\", package.cpath:gsub\\(\";\", \"\\\\n  \"\\)\\)' -c 'qa')",
+      "Bash(/run/current-system/sw/bin/nvim --headless -c 'Lazy load image.nvim' -c 'lua package.loaded[\"magick\"] = nil; package.preload[\"magick\"] = nil; local f, ferr = loadfile\\(\"/Users/manug/.local/share/nvim/lazy-rocks/image.nvim/share/lua/5.1/magick.lua\"\\) or loadfile\\(\"/Users/manug/.local/share/nvim/lazy-rocks/image.nvim/share/lua/5.1/magick/init.lua\"\\); print\\(\"loadfile:\", f, ferr\\); if f then local ok, err = pcall\\(f\\); print\\(\"pcall:\", ok, err\\) end' -c 'qa')",
+      "Bash(/run/current-system/sw/bin/nvim --headless -c 'Lazy load image.nvim' -c 'lua for _, m in ipairs\\({\"magick.wand\", \"magick.wand.lib\", \"magick.wand.data_types\"}\\) do package.loaded[m] = nil; local ok, err = pcall\\(require, m\\); print\\(m, ok, err\\); if not ok then break end end' -c 'qa')",
+      "Bash(/run/current-system/sw/bin/nvim --headless -c 'Lazy load image.nvim' -c 'lua package.loaded[\"magick.wand.lib\"] = nil; local f, e = loadfile\\(\"/Users/manug/.local/share/nvim/lazy-rocks/image.nvim/share/lua/5.1/magick/wand/lib.lua\"\\); print\\(\"load:\", f, e\\); if f then local ok, err = pcall\\(f\\); print\\(\"run:\", ok, err\\) end' -c 'qa')",
+      "Bash(/run/current-system/sw/bin/nvim --headless probe.py -c 'sleep 800m' -c 'lua local g = vim.g; print\\(\"auto_open_output:\", tostring\\(g.molten_auto_open_output\\)\\); print\\(\"image_location:\", tostring\\(g.molten_image_location\\)\\); print\\(\"virt_text_output:\", tostring\\(g.molten_virt_text_output\\)\\); print\\(\"output_virt_lines:\", tostring\\(g.molten_output_virt_lines\\)\\); print\\(\"hide_on_leave:\", tostring\\(g.molten_output_win_hide_on_leave\\)\\); print\\(\"show_more:\", tostring\\(g.molten_output_show_more\\)\\)' -c 'lua local m = vim.fn.maparg\\(\"<leader>jt\", \"n\"\\); print\\(\"<leader>jt mapping:\", m == \"\" and \"NONE\" or \"set\"\\)' -c 'qa')"
+    ]
+  }
+}
