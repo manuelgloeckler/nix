@@ -1,247 +1,37 @@
--- ~/.config/nvim/lua/plugins/ai-keys.lua
 return {
-  -- Copilot: inline suggestions + leader-based keymaps with desc (so they appear in hints)
   {
     "zbirenbaum/copilot.lua",
-    -- Copilot extra is already imported via lazyvim.json
-    opts = function(_, opts)
-      opts = opts or {}
-      opts.suggestion = vim.tbl_deep_extend("force", opts.suggestion or {}, {
+    cmd = "Copilot",
+    event = "InsertEnter",
+    opts = {
+      suggestion = {
+        enabled = true,
         auto_trigger = true,
-        debounce = 300,
-        -- Keep the multi-line ghost text visible while blink.cmp's menu is
-        -- open, so we can compare popup completions against the inline preview
-        -- instead of one hiding the other.
+        debounce = 150,
         hide_during_completion = false,
-      })
-      opts.filetypes = vim.tbl_deep_extend("force", opts.filetypes or {}, {
+        keymap = {
+          accept = "<Tab>",
+          next = "<M-j>",
+          prev = "<M-k>",
+          dismiss = "<C-e>",
+        },
+      },
+      panel = { enabled = false },
+      filetypes = {
         markdown = false,
         gitcommit = false,
         text = false,
-      })
-      return opts
-    end,
-    keys = {
-      {
-        "<leader>aA",
-        function()
-          require("copilot.suggestion").toggle_auto_trigger()
-        end,
-        desc = "AI: Toggle Copilot Autosuggest",
-        mode = { "n", "i" },
-      },
-      {
-        "<leader>aj",
-        function()
-          require("copilot.suggestion").next()
-        end,
-        desc = "AI: Next Suggestion",
-        mode = { "n", "i" },
-      },
-      {
-        "<leader>ak",
-        function()
-          require("copilot.suggestion").prev()
-        end,
-        desc = "AI: Prev Suggestion",
-        mode = { "n", "i" },
-      },
-      {
-        "<leader>ax",
-        function()
-          require("copilot.suggestion").dismiss()
-        end,
-        desc = "AI: Dismiss Suggestion",
-        mode = { "n", "i" },
-      },
-      {
-        "<M-CR>",
-        function()
-          require("copilot.suggestion").accept()
-        end,
-        desc = "AI: Accept Full Suggestion",
-        mode = "i",
-      },
-      {
-        "<M-w>",
-        function()
-          require("copilot.suggestion").accept_word()
-        end,
-        desc = "AI: Accept Next Word",
-        mode = "i",
-      },
-      {
-        "<M-l>",
-        function()
-          require("copilot.suggestion").accept_line()
-        end,
-        desc = "AI: Accept Next Line",
-        mode = "i",
-      },
-      {
-        "<C-e>",
-        function()
-          require("copilot.suggestion").dismiss()
-        end,
-        desc = "AI: Dismiss (Quick)",
-        mode = "i",
       },
     },
   },
 
-  -- Use blink.cmp with the blink-copilot source for richer Copilot items
   {
-    "saghen/blink.cmp",
-    optional = true,
-    dependencies = { "fang2hou/blink-copilot" },
-    opts = function(_, opts)
-      -- Tab: accept Copilot ghost text if visible, else accept blink's
-      -- selected/highlighted item, else jump in snippet, else fall through.
-      -- S-Tab: snippet backward, else fall through.
-      opts.keymap = vim.tbl_deep_extend("force", opts.keymap or {}, {
-        preset = "super-tab",
-        ["<Tab>"] = {
-          function()
-            local ok, copilot = pcall(require, "copilot.suggestion")
-            if ok and copilot.is_visible and copilot.is_visible() then
-              copilot.accept()
-              return true
-            end
-          end,
-          "select_and_accept",
-          "snippet_forward",
-          "fallback",
-        },
-        ["<S-Tab>"] = { "snippet_backward", "fallback" },
-      })
-
-      -- Prefer Copilot when it's confident and show a few strong options
-      opts.sources = opts.sources or {}
-      opts.sources.default = { "copilot", "lsp", "path", "snippets", "buffer" }
-      opts.sources.providers = vim.tbl_deep_extend("force", opts.sources.providers or {}, {
-        copilot = {
-          name = "copilot",
-          module = "blink-copilot",
-          score_offset = 100,
-          async = true,
-          enabled = function()
-            local ft = vim.bo.filetype
-            return ft ~= "markdown" and ft ~= "gitcommit" and ft ~= "text"
-          end,
-          opts = {
-            max_completions = 2,
-            debounce = 300,
-          },
-        },
-      })
-
-      -- Allow toggling blink.cmp enablement with <leader>aC
-      local enabled = true
-      local prev_enabled = opts.enabled
-      if type(prev_enabled) ~= "function" then
-        prev_enabled = function()
-          return prev_enabled ~= false
-        end
-      end
-      opts.enabled = function()
-        return enabled and prev_enabled()
-      end
-      vim.g.__blink_toggle = function(on)
-        if on == nil then
-          enabled = not enabled
-        else
-          enabled = on
-        end
-        vim.notify("blink.cmp: " .. (enabled and "enabled" or "disabled"))
-      end
-
-      return opts
-    end,
-    keys = {
-      {
-        "<leader>aC",
-        function()
-          if vim.g.__blink_toggle then
-            vim.g.__blink_toggle()
-          end
-        end,
-        desc = "AI: Toggle blink.cmp Completions",
-        mode = { "n", "i" },
-      },
-    },
+    "zbirenbaum/copilot-cmp",
+    enabled = false,
   },
+
   {
-    "hrsh7th/nvim-cmp",
-    opts = function(_, opts)
-      local cmp = require("cmp")
-      opts = opts or {}
-      opts.mapping = opts.mapping or cmp.mapping.preset.insert({})
-
-      local function try_accept_copilot()
-        local ok, copilot = pcall(require, "copilot.suggestion")
-        if not ok or not copilot then
-          return false
-        end
-
-        local is_visible = copilot.is_visible or copilot.visible
-        if is_visible and is_visible() then
-          copilot.accept()
-          return true
-        end
-
-        return false
-      end
-
-      opts.mapping["<CR>"] = cmp.mapping(function(fallback)
-        if cmp.visible() then
-          cmp.abort()
-        end
-        fallback()
-      end, { "i", "s" })
-
-      opts.mapping["<Tab>"] = cmp.mapping(function(fallback)
-        if try_accept_copilot() then
-          return
-        end
-
-        if cmp.visible() then
-          local has_selection = cmp.get_selected_entry() ~= nil
-          cmp.confirm({
-            behavior = cmp.ConfirmBehavior.Insert,
-            select = not has_selection,
-          })
-          return
-        end
-
-        local ok, luasnip = pcall(require, "luasnip")
-        if ok and luasnip then
-          local can_expand = (luasnip.expand_or_locally_jumpable and luasnip.expand_or_locally_jumpable())
-            or (luasnip.expand_or_jumpable and luasnip.expand_or_jumpable())
-          if can_expand then
-            luasnip.expand_or_jump()
-            return
-          end
-        end
-
-        fallback()
-      end, { "i", "s" })
-
-      opts.mapping["<S-Tab>"] = cmp.mapping(function(fallback)
-        if cmp.visible() then
-          cmp.select_prev_item()
-          return
-        end
-
-        local ok, luasnip = pcall(require, "luasnip")
-        if ok and luasnip and luasnip.jumpable and luasnip.jumpable(-1) then
-          luasnip.jump(-1)
-          return
-        end
-
-        fallback()
-      end, { "i", "s" })
-
-      return opts
-    end,
+    "fang2hou/blink-copilot",
+    enabled = false,
   },
 }
