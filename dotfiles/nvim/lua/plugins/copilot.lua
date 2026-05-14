@@ -31,6 +31,24 @@ return {
   },
 
   {
+    "saghen/blink.cmp",
+    optional = true,
+    opts = function(_, opts)
+      opts.sources = opts.sources or {}
+
+      opts.sources.default = vim.tbl_filter(function(source)
+        return source ~= "copilot"
+      end, opts.sources.default or {})
+
+      if opts.sources.providers then
+        opts.sources.providers.copilot = nil
+      end
+
+      return opts
+    end,
+  },
+
+  {
     "fang2hou/blink-copilot",
     enabled = false,
   },
