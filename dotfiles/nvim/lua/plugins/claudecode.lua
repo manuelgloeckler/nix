@@ -4,25 +4,21 @@ return {
     opts = {
       terminal = {
         provider = "snacks",
-        -- snacks.terminal expects window opts nested under `win`; flat keys
-        -- get silently ignored and you get the default split layout.
-        -- Mirror the opencode.nvim sizing (88% × 82%, rounded float).
+        -- claudecode merges `snacks_win_opts` directly into snacks' `win` table,
+        -- so these keys must be flat (NOT nested under another `win`, unlike
+        -- opencode.nvim). Mirror the opencode sizing (88% × 82%, rounded float).
         snacks_win_opts = {
-          win = {
-            position = "float",
-            width = 0.88,
-            height = 0.82,
-            border = "rounded",
-          },
+          position = "float",
+          width = 0.88,
+          height = 0.82,
+          border = "rounded",
         },
       },
     },
     keys = {
       {
         "<D-M-C-l>",
-        function()
-          require("claudecode").toggle()
-        end,
+        "<cmd>ClaudeCode<cr>",
         desc = "Toggle Claude Code (Super+l)",
         mode = { "n", "t" },
       },

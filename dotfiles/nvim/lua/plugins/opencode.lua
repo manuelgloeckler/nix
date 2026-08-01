@@ -6,7 +6,7 @@ return {
       {
         "<leader>ao",
         function()
-          require("opencode").toggle()
+          require("opencode.config").opts.server.toggle()
         end,
         desc = "Toggle OpenCode",
         mode = "n",
@@ -54,7 +54,7 @@ return {
       {
         "<D-M-C-o>",
         function()
-          require("opencode").toggle()
+          require("opencode.config").opts.server.toggle()
         end,
         desc = "Toggle OpenCode (Super+o)",
         mode = { "n", "t" },
@@ -81,20 +81,6 @@ return {
           width = 0.88,
           height = 0.82,
           border = "rounded",
-          on_win = function(win)
-            local winid = win and win.win
-            if not winid or not vim.api.nvim_win_is_valid(winid) then
-              return
-            end
-
-            local buf = vim.api.nvim_win_get_buf(winid)
-            if vim.b[buf].opencode_terminal_setup_done then
-              return
-            end
-
-            vim.b[buf].opencode_terminal_setup_done = true
-            require("opencode.terminal").setup(winid)
-          end,
         },
       }
       vim.g.opencode_opts = vim.tbl_deep_extend("force", vim.g.opencode_opts or {}, {
