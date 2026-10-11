@@ -1,0 +1,17 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ $# -ne 3 ]]; then
+  echo "usage: dotsync <dotfiles-dir> <remote-setup-script> <ssh-host>" >&2
+  exit 2
+fi
+
+dotfiles_dir=$1
+remote_setup=$2
+host=$3
+
+# A tar stream needs only SSH and tar on the server; extraction touches only
+# the dedicated dotsync directory, never the server's own configuration.
+tar -C "$dotfiles_dir" -cf - tmux/tmux.conf nvim |
+  ssh -T -- "$host" 'mkdir -p "$HOME/.local/share/dotsync" && tar -C "$HOME/.local/share/dotsync" -xf -'
+ssh -T -- "$host" 'sh -s' < "$remote_setup"

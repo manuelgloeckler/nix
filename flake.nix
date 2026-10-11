@@ -127,6 +127,8 @@
         "com.apple.symbolichotkeys" = {
           AppleSymbolicHotKeys = {
             "36" = { enabled = false; }; # Disable F11 "Show Desktop"
+            "60" = { enabled = false; }; # Free Ctrl+Space from input-source switching for tmux
+            "64" = { enabled = false; }; # Free Cmd+Space from Spotlight for Raycast
           };
         };
       };
@@ -240,6 +242,13 @@
       ];
 
       home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
+      home.file.".local/bin/dotsync" = {
+        text = ''
+          #!${pkgs.bash}/bin/bash
+          exec ${pkgs.bash}/bin/bash ${./scripts/dotsync} ${./dotfiles} ${./scripts/dotsync-remote} "$@"
+        '';
+        executable = true;
+      };
       programs.tmux = {
         enable = true;
         extraConfig = builtins.readFile ./dotfiles/tmux/tmux.conf;
@@ -305,6 +314,14 @@
       programs.zsh = {
         enable = true;
         initContent = ''
+          # Sync CLI settings before simple interactive SSH connections.
+          ssh() {
+            if [[ $# -eq 1 && $1 != -* && -t 0 && -t 1 ]]; then
+              dotsync "$1" || print -u2 'dotsync failed; connecting anyway'
+            fi
+            command ssh "$@"
+          }
+
           # OpenAgents PATH
           export PATH="$HOME/.openagents/nodejs/node_modules/.bin:$PATH"
 
@@ -386,6 +403,13 @@
                 force = true;
               };
               home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
+              home.file.".local/bin/dotsync" = {
+                text = ''
+                  #!${pkgs.bash}/bin/bash
+                  exec ${pkgs.bash}/bin/bash ${./scripts/dotsync} ${./dotfiles} ${./scripts/dotsync-remote} "$@"
+                '';
+                executable = true;
+              };
               programs.tmux = {
                 enable = true;
                 extraConfig = builtins.readFile ./dotfiles/tmux/tmux.conf;
@@ -460,6 +484,14 @@
               programs.zsh = {
                 enable = true;
                 initContent = ''
+                  # Sync CLI settings before simple interactive SSH connections.
+                  ssh() {
+                    if [[ $# -eq 1 && $1 != -* && -t 0 && -t 1 ]]; then
+                      dotsync "$1" || print -u2 'dotsync failed; connecting anyway'
+                    fi
+                    command ssh "$@"
+                  }
+
                   # OpenAgents PATH
                   export PATH="$HOME/.openagents/nodejs/node_modules/.bin:$PATH"
 

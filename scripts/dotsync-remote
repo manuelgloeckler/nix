@@ -1,0 +1,33 @@
+#!/bin/sh
+set -eu
+
+managed="$HOME/.local/share/dotsync"
+mkdir -p "$HOME/.config"
+
+# tmux reads ~/.tmux.conf before the XDG path. Extend the one the host already
+# uses instead of shadowing it with a new ~/.tmux.conf.
+if [ -e "$HOME/.tmux.conf" ] || [ -L "$HOME/.tmux.conf" ]; then
+  tmux_config="$HOME/.tmux.conf"
+else
+  tmux_config="$HOME/.config/tmux/tmux.conf"
+  mkdir -p "$HOME/.config/tmux"
+fi
+
+if [ -L "$tmux_config" ] || [ -d "$tmux_config" ]; then
+  printf 'dotsync: skipping managed or non-file tmux config: %s\n' "$tmux_config" >&2
+elif ! grep -Fq '# dotsync tmux overlay' "$tmux_config" 2>/dev/null; then
+  printf '\n# dotsync tmux overlay\nsource-file "%s/tmux/tmux.conf"\n' "$managed" >> "$tmux_config"
+fi
+
+# Keep a full Neovim profile available without loading LazyVim over a host's
+# existing plugins. NVIM_APPNAME=dotsync-nvim nvim selects it explicitly.
+if [ ! -e "$HOME/.config/dotsync-nvim" ] && [ ! -L "$HOME/.config/dotsync-nvim" ]; then
+  ln -s "$managed/nvim" "$HOME/.config/dotsync-nvim"
+fi
+if [ ! -e "$HOME/.config/nvim" ] && [ ! -L "$HOME/.config/nvim" ]; then
+  ln -s "$managed/nvim" "$HOME/.config/nvim"
+fi
+
+if command -v tmux >/dev/null 2>&1; then
+  tmux source-file "$tmux_config" 2>/dev/null || true
+fi
