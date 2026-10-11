@@ -240,6 +240,10 @@
       ];
 
       home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
+      programs.tmux = {
+        enable = true;
+        extraConfig = builtins.readFile ./dotfiles/tmux/tmux.conf;
+      };
       xdg.configFile."nvim".source = ./dotfiles/nvim;
       xdg.configFile."lazygit/config.yml".source = ./dotfiles/lazygit/config.yml;
 
@@ -382,6 +386,10 @@
                 force = true;
               };
               home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
+              programs.tmux = {
+                enable = true;
+                extraConfig = builtins.readFile ./dotfiles/tmux/tmux.conf;
+              };
               xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
               xdg.configFile."ghostty/themes".source = ./dotfiles/ghostty/themes;
               xdg.configFile."nvim".source = ./dotfiles/nvim;
