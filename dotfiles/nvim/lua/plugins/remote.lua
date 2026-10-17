@@ -311,6 +311,7 @@ return {
       })
     end,
     keys = {
+      { "<leader>m", "", desc = "+Remote", mode = { "n", "x" } },
       { "<leader>mS", "<cmd>RemoteStart<cr>",        desc = "Remote: start session" },
       { "<leader>mx", "<cmd>RemoteStop<cr>",         desc = "Remote: stop session" },
       { "<leader>mi", "<cmd>RemoteInfo<cr>",         desc = "Remote: session info" },
@@ -318,17 +319,5 @@ return {
       { "<leader>mc", "<cmd>RemoteCleanup<cr>",      desc = "Remote: cleanup host" },
       { "<leader>mo", "<cmd>RemoteOpencodeSync<cr>", desc = "Remote: sync opencode auth + install" },
     },
-  },
-
-  -- which-key group label for the remote prefix
-  {
-    "folke/which-key.nvim",
-    optional = true,
-    opts = function(_, _)
-      local ok, wk = pcall(require, "which-key")
-      if ok then
-        wk.add({ { "<leader>m", group = "Remote" } })
-      end
-    end,
   },
 }
