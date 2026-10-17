@@ -3,6 +3,7 @@
 return {
   "scristobal/code-review.nvim",
   main = "review",
+  lazy = false,
   opts = {},
   keys = {
     { "<leader>r", "", desc = "+Comments", mode = { "n", "x" } },
