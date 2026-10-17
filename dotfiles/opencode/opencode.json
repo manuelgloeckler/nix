@@ -63,6 +63,18 @@
       "command": [
         "/Users/manug/.local/bin/uv-mcp"
       ]
+    },
+    "agenthome": {
+      "type": "local",
+      "command": [
+        "ah",
+        "mcp"
+      ],
+      "enabled": true,
+      "environment": {
+        "AGENTHOME_HUB": "https://cockpit.tail30e3e7.ts.net:8443",
+        "AGENTHOME_TOKEN_FILE": "/Users/manug/.agenthome/mcp/opencode.token"
+      }
     }
   }
 }
