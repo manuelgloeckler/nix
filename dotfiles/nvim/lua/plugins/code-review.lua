@@ -2,6 +2,7 @@
 -- Keys: <leader>ra add, <leader>rd delete, <leader>rl list, <leader>rx clear
 return {
   "scristobal/code-review.nvim",
+  main = "review",
   opts = {},
   keys = {
     { "<leader>r", "", desc = "+Comments", mode = { "n", "x" } },
