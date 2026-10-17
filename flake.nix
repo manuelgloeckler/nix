@@ -50,6 +50,7 @@
         ripgrep 
         jq 
         imagemagick
+        chafa
         imagemagick.dev   # ships MagickWand.pc — needed for the magick LuaRock that image.nvim builds against
         pkg-config
         obsidian 
@@ -123,15 +124,17 @@
         "com.apple.universalaccess" = {
           reduceMotion = true;
         };
-
-        "com.apple.symbolichotkeys" = {
-          AppleSymbolicHotKeys = {
-            "36" = { enabled = false; }; # Disable F11 "Show Desktop"
-            "60" = { enabled = false; }; # Free Ctrl+Space from input-source switching for tmux
-            "64" = { enabled = false; }; # Free Cmd+Space from Spotlight for Raycast
-          };
-        };
       };
+
+      # Update individual shortcuts rather than replacing the entire shortcut
+      # dictionary, then tell macOS to reload them (SystemUIServer alone isn't enough).
+      system.activationScripts.postActivation.text = ''
+        user_id="$(id -u manug)"
+        launchctl asuser "$user_id" sudo --user=manug -- /usr/bin/defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 36 '{ enabled = 0; }'
+        launchctl asuser "$user_id" sudo --user=manug -- /usr/bin/defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 60 '{ enabled = 0; value = { parameters = (32, 49, 262144); type = standard; }; }'
+        launchctl asuser "$user_id" sudo --user=manug -- /usr/bin/defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 64 '{ enabled = 0; value = { parameters = (32, 49, 1048576); type = standard; }; }'
+        launchctl asuser "$user_id" sudo --user=manug -- /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
+      '';
 
       # Use custom launchd agents instead of nix-darwin services or brew services
       #services.yabai.enable = lib.mkForce false;
@@ -224,6 +227,7 @@
         ripgrep
         jq
         imagemagick
+        chafa
         imagemagick.dev   # ships MagickWand.pc — needed for the magick LuaRock that image.nvim builds against
         pkg-config
         wget
@@ -242,6 +246,8 @@
       ];
 
       home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
+      home.file.".local/bin/ticat-view" = { source = ./scripts/ticat-view; executable = true; };
+      home.file.".local/bin/tmux-maybe-preview" = { source = ./scripts/tmux-maybe-preview; executable = true; };
       home.file.".local/bin/dotsync" = {
         text = ''
           #!${pkgs.bash}/bin/bash
@@ -251,6 +257,13 @@
       };
       programs.tmux = {
         enable = true;
+        plugins = [ {
+          plugin = pkgs.tmuxPlugins.resurrect;
+          extraConfig = ''
+            set -g @resurrect-save 'S'
+            set -g @resurrect-restore 'R'
+          '';
+        } ];
         extraConfig = builtins.readFile ./dotfiles/tmux/tmux.conf;
       };
       xdg.configFile."nvim".source = ./dotfiles/nvim;
@@ -309,6 +322,21 @@
           echo "Installing OpenAgents..."
           curl -fsSL https://openagents.org/install.sh | bash 2>/dev/null || true
         fi
+      '';
+
+      # Seed each harness's skills dir from the canonical base. Copy only when a
+      # skill is missing so per-harness copies can diverge and existing skills stay.
+      home.activation.agentSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        base="${./dotfiles/opencode/skills}"
+        for dir in "$HOME/.claude/skills" "$HOME/.codex/skills"; do
+          mkdir -p "$dir"
+          for skill in "$base"/*/; do
+            name="$(basename "$skill")"
+            if [ ! -e "$dir/$name" ]; then
+              cp -R "$skill" "$dir/$name"
+            fi
+          done
+        done
       '';
 
       programs.zsh = {
@@ -403,6 +431,8 @@
                 force = true;
               };
               home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
+              home.file.".local/bin/ticat-view" = { source = ./scripts/ticat-view; executable = true; };
+              home.file.".local/bin/tmux-maybe-preview" = { source = ./scripts/tmux-maybe-preview; executable = true; };
               home.file.".local/bin/dotsync" = {
                 text = ''
                   #!${pkgs.bash}/bin/bash
@@ -412,6 +442,13 @@
               };
               programs.tmux = {
                 enable = true;
+                plugins = [ {
+                  plugin = pkgs.tmuxPlugins.resurrect;
+                  extraConfig = ''
+                    set -g @resurrect-save 'S'
+                    set -g @resurrect-restore 'R'
+                  '';
+                } ];
                 extraConfig = builtins.readFile ./dotfiles/tmux/tmux.conf;
               };
               xdg.configFile."ghostty/config".source = ./dotfiles/ghostty/config;
@@ -479,6 +516,21 @@
                   echo "Installing OpenAgents..."
                   curl -fsSL https://openagents.org/install.sh | bash 2>/dev/null || true
                 fi
+              '';
+
+              # Seed each harness's skills dir from the canonical base. Copy only when a
+              # skill is missing so per-harness copies can diverge and existing skills stay.
+              home.activation.agentSkills = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                base="${./dotfiles/opencode/skills}"
+                for dir in "$HOME/.claude/skills" "$HOME/.codex/skills"; do
+                  mkdir -p "$dir"
+                  for skill in "$base"/*/; do
+                    name="$(basename "$skill")"
+                    if [ ! -e "$dir/$name" ]; then
+                      cp -R "$skill" "$dir/$name"
+                    fi
+                  done
+                done
               '';
 
               programs.zsh = {

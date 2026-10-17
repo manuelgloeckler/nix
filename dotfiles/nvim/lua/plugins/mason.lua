@@ -26,36 +26,42 @@ return {
     opts = function(_, opts)
       opts = opts or {}
       opts.servers = opts.servers or {}
-      opts.servers.pyright = vim.tbl_deep_extend("force", opts.servers.pyright or {}, {
+      -- Pyrefly replaces pyright as the Python type checker.
+      -- "auto" migrates nearby mypy/pyright config in memory, else falls back
+      -- to the "basic" preset (closest to the old pyright basic setup).
+      -- Use "default" or "strict" for fuller squiggles.
+      opts.servers.pyrefly = vim.tbl_deep_extend("force", opts.servers.pyrefly or {}, {
+        enabled = true,
         before_init = function(_, config)
           local py = require("config.python")
           local venv_python = py.resolve_project_python(config.root_dir)
           if not venv_python then
             return
           end
-          -- e.g. /project/.venv/bin/python -> venv_dir=/project/.venv
-          local venv_dir = vim.fn.fnamemodify(venv_python, ":h:h")
-          -- Must mutate in-place: config.settings and client.settings share
-          -- the same table reference; replacing config.settings would break it.
+          -- Pyrefly reads the interpreter from initializationOptions.pythonPath
+          -- (top-level, no "python." prefix). Also mirror it into settings
+          -- for clients that forward settings instead.
+          config.initializationOptions = vim.tbl_deep_extend(
+            "force",
+            config.initializationOptions or {},
+            { pythonPath = venv_python }
+          )
+          config.settings = config.settings or {}
           config.settings.python = vim.tbl_deep_extend("force", config.settings.python or {}, {
             pythonPath = venv_python,
-            venvPath = vim.fn.fnamemodify(venv_dir, ":h"),
-            venv = vim.fn.fnamemodify(venv_dir, ":t"),
           })
         end,
-        settings = {
-          python = {
-            analysis = {
-              autoImportCompletions = true,
-              autoSearchPaths = true,
-              diagnosticMode = "openFilesOnly",
-              typeCheckingMode = "basic",
-              useLibraryCodeForTypes = true,
-              disableOrganizeImports = true,
-            },
+        initializationOptions = {
+          pythonPath = nil, -- filled in by before_init when a project venv is found
+          pyrefly = {
+            typeCheckingMode = "auto",
           },
         },
       })
+      -- Explicitly off: LazyVim's python extra already disables these when
+      -- lazyvim_python_lsp = "pyrefly", but keep it deterministic here too.
+      opts.servers.pyright = { enabled = false }
+      opts.servers.basedpyright = { enabled = false }
       -- Keep Python LSP predictable: avoid auto-enabling extra servers from Mason.
       opts.servers.pylsp = false
       opts.servers.ruff = false

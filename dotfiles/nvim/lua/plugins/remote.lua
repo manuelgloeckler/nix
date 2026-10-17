@@ -311,12 +311,12 @@ return {
       })
     end,
     keys = {
-      { "<leader>rS", "<cmd>RemoteStart<cr>",        desc = "Remote: start session" },
-      { "<leader>rx", "<cmd>RemoteStop<cr>",         desc = "Remote: stop session" },
-      { "<leader>ri", "<cmd>RemoteInfo<cr>",         desc = "Remote: session info" },
-      { "<leader>rl", "<cmd>RemoteLog<cr>",          desc = "Remote: open log" },
-      { "<leader>rc", "<cmd>RemoteCleanup<cr>",      desc = "Remote: cleanup host" },
-      { "<leader>ro", "<cmd>RemoteOpencodeSync<cr>", desc = "Remote: sync opencode auth + install" },
+      { "<leader>mS", "<cmd>RemoteStart<cr>",        desc = "Remote: start session" },
+      { "<leader>mx", "<cmd>RemoteStop<cr>",         desc = "Remote: stop session" },
+      { "<leader>mi", "<cmd>RemoteInfo<cr>",         desc = "Remote: session info" },
+      { "<leader>ml", "<cmd>RemoteLog<cr>",          desc = "Remote: open log" },
+      { "<leader>mc", "<cmd>RemoteCleanup<cr>",      desc = "Remote: cleanup host" },
+      { "<leader>mo", "<cmd>RemoteOpencodeSync<cr>", desc = "Remote: sync opencode auth + install" },
     },
   },
 
@@ -327,7 +327,7 @@ return {
     opts = function(_, _)
       local ok, wk = pcall(require, "which-key")
       if ok then
-        wk.add({ { "<leader>r", group = "Remote" } })
+        wk.add({ { "<leader>m", group = "Remote" } })
       end
     end,
   },

@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+path=${1:?image path required}
+if [[ -d $path ]]; then
+  files=("$path"/*)
+else
+  files=()
+  while IFS= read -r file; do files+=("$file"); done < <(compgen -G "$path" || true)
+fi
+
+for file in "${files[@]}"; do
+  [[ -f $file ]] || continue
+  case $file in
+    *.[pP][nN][gG]|*.[jJ][pP][gG]|*.[jJ][pP][eE][gG]|*.[gG][iI][fF]|*.[wW][eE][bB][pP]|*.[aA][vV][iI][fF]) ;;
+    *) continue ;;
+  esac
+  clear
+  chafa --format kitty --passthrough tmux --size 80x40 "$file"
+  read -r -n 1 -p 'Next image (q to quit): ' key || true
+  [[ $key == q ]] && break
+done

@@ -1,7 +1,8 @@
 #!/bin/sh
 set -eu
 
-managed="$HOME/.local/share/dotsync"
+managed="$HOME/.local/share/dotsync-current"
+old_managed="$HOME/.local/share/dotsync"
 mkdir -p "$HOME/.config"
 
 # tmux reads ~/.tmux.conf before the XDG path. Extend the one the host already
@@ -15,18 +16,20 @@ fi
 
 if [ -L "$tmux_config" ] || [ -d "$tmux_config" ]; then
   printf 'dotsync: skipping managed or non-file tmux config: %s\n' "$tmux_config" >&2
-elif ! grep -Fq '# dotsync tmux overlay' "$tmux_config" 2>/dev/null; then
+elif ! grep -Fq "source-file \"$managed/tmux/tmux.conf\"" "$tmux_config" 2>/dev/null; then
   printf '\n# dotsync tmux overlay\nsource-file "%s/tmux/tmux.conf"\n' "$managed" >> "$tmux_config"
 fi
 
 # Keep a full Neovim profile available without loading LazyVim over a host's
 # existing plugins. NVIM_APPNAME=dotsync-nvim nvim selects it explicitly.
-if [ ! -e "$HOME/.config/dotsync-nvim" ] && [ ! -L "$HOME/.config/dotsync-nvim" ]; then
-  ln -s "$managed/nvim" "$HOME/.config/dotsync-nvim"
-fi
-if [ ! -e "$HOME/.config/nvim" ] && [ ! -L "$HOME/.config/nvim" ]; then
-  ln -s "$managed/nvim" "$HOME/.config/nvim"
-fi
+for config in dotsync-nvim nvim; do
+  target="$HOME/.config/$config"
+  if [ ! -e "$target" ] && [ ! -L "$target" ]; then
+    ln -s "$managed/nvim" "$target"
+  elif [ -L "$target" ] && [ "$(readlink "$target")" = "$old_managed/nvim" ]; then
+    ln -sfn "$managed/nvim" "$target"
+  fi
+done
 
 if command -v tmux >/dev/null 2>&1; then
   tmux source-file "$tmux_config" 2>/dev/null || true

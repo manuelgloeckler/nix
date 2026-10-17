@@ -14,6 +14,16 @@
         },
         "rules": [
           {
+            "description": "External keyboard: §/± key (next to Shift) → `/~ like MacBook",
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": { "key_code": "non_us_backslash", "modifiers": { "optional": [ "any" ] } },
+                "to": [ { "key_code": "grave_accent_and_tilde" } ]
+              }
+            ]
+          },
+          {
             "description": "Caps Lock → Esc (tap) / Hyper (hold: ctrl+opt+cmd)",
             "manipulators": [
               {
@@ -39,6 +49,52 @@
               { "type": "basic", "from": { "consumer_key_code": "mute" }, "to": [ { "key_code": "f10" } ] },
               { "type": "basic", "from": { "consumer_key_code": "volume_decrement" }, "to": [ { "key_code": "f11" } ] },
               { "type": "basic", "from": { "consumer_key_code": "volume_increment" }, "to": [ { "key_code": "f12" } ] }
+            ]
+          },
+          {
+            "description": "Ghostty: Ctrl+Space as tmux prefix without triggering macOS input switching",
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": { "key_code": "spacebar", "modifiers": { "mandatory": [ "control" ] } },
+                "to": [ { "key_code": "b", "modifiers": [ "control" ] } ],
+                "conditions": [ { "type": "frontmost_application_if", "bundle_identifiers": [ "^com\\.mitchellh\\.ghostty$" ] } ]
+              }
+            ]
+          },
+          {
+            "description": "Chrome: Cmd+J/K to move between (vertical) tabs, Cmd+O to focus the address bar, Cmd+/ or Ctrl+Shift+F to find a tab",
+            "manipulators": [
+              {
+                "type": "basic",
+                "from": { "key_code": "j", "modifiers": { "mandatory": [ "command" ] } },
+                "to": [ { "key_code": "tab", "modifiers": [ "control" ] } ],
+                "conditions": [ { "type": "frontmost_application_if", "bundle_identifiers": [ "^com\\.google\\.Chrome$" ] } ]
+              },
+              {
+                "type": "basic",
+                "from": { "key_code": "k", "modifiers": { "mandatory": [ "command" ] } },
+                "to": [ { "key_code": "tab", "modifiers": [ "control", "shift" ] } ],
+                "conditions": [ { "type": "frontmost_application_if", "bundle_identifiers": [ "^com\\.google\\.Chrome$" ] } ]
+              },
+              {
+                "type": "basic",
+                "from": { "key_code": "slash", "modifiers": { "mandatory": [ "command" ] } },
+                "to": [ { "key_code": "a", "modifiers": [ "command", "shift" ] } ],
+                "conditions": [ { "type": "frontmost_application_if", "bundle_identifiers": [ "^com\\.google\\.Chrome$" ] } ]
+              },
+              {
+                "type": "basic",
+                "from": { "key_code": "o", "modifiers": { "mandatory": [ "command" ] } },
+                "to": [ { "key_code": "l", "modifiers": [ "command" ] } ],
+                "conditions": [ { "type": "frontmost_application_if", "bundle_identifiers": [ "^com\\.google\\.Chrome$" ] } ]
+              },
+              {
+                "type": "basic",
+                "from": { "key_code": "f", "modifiers": { "mandatory": [ "control", "shift" ] } },
+                "to": [ { "key_code": "a", "modifiers": [ "command", "shift" ] } ],
+                "conditions": [ { "type": "frontmost_application_if", "bundle_identifiers": [ "^com\\.google\\.Chrome$" ] } ]
+              }
             ]
           }
         ]

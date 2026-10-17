@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+word=${2-}
+[[ $word == __NONE__ ]] && word=${1-}
+[[ $word == __NONE__ || -z $word ]] && exit 0
+tmux set-buffer -- "$word"
+
+path=$word
+[[ $path == /* ]] || path="${3:-$PWD}/$path"
+case $path in
+  *.[pP][nN][gG]|*.[jJ][pP][gG]|*.[jJ][pP][eE][gG]|*.[gG][iI][fF]|*.[wW][eE][bB][pP]|*.[aA][vV][iI][fF]) ;;
+  *) exit 0 ;;
+esac
+[[ -f $path ]] || exit 0
+tmux new-window -n img "$HOME/.local/bin/ticat-view" "$path"

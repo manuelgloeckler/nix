@@ -70,6 +70,24 @@ vim.api.nvim_create_autocmd("BufEnter", {
   end,
 })
 
+-- Hand off rendered/binary documents to the OS default app instead of loading
+-- them into a buffer. `BufReadCmd` fully replaces the read, so nvim never tries
+-- to interpret the content; we then wipe the placeholder buffer so it can't be
+-- written back over the file.
+vim.api.nvim_create_autocmd("BufReadCmd", {
+  group = vim.api.nvim_create_augroup("open_docs_externally", { clear = true }),
+  pattern = { "*.pdf", "*.html", "*.htm" },
+  callback = function(args)
+    if vim.g.remote_neovim_host then
+      return
+    end
+    vim.fn.jobstart({ "open", vim.api.nvim_buf_get_name(args.buf) }, { detach = true })
+    vim.schedule(function()
+      pcall(vim.api.nvim_buf_delete, args.buf, { force = true })
+    end)
+  end,
+})
+
 -- If Molten commands are missing (e.g. provider path changed), register remote plugins.
 vim.api.nvim_create_autocmd("VimEnter", {
   group = vim.api.nvim_create_augroup("ensure_remote_plugins", { clear = true }),

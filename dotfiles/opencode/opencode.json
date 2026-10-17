@@ -8,6 +8,7 @@
     "opencode-pollinations-plugin@6.2.7-1",
     "@bdliyq/opencode-rate-limit-retry@1.0.3"
   ],
+  "lsp": true,
   "tools": {
     "websearch": true,
     "codesearch": true
@@ -31,8 +32,8 @@
         "Qwen/Qwen3.6-35B-A3B": {
           "name": "Qwen3.6 35B A3B"
         },
-        "deepseek-ai/DeepSeek-V4-Flash-0731": {
-          "name": "DeepSeek V4 Flash"
+        "deepseek-ai/DeepSeek-V4.1-Flash": {
+          "name": "DeepSeek V4.1 Flash"
         },
         "google/gemma-4-31B-it-qat-w4a16-ct": {
           "name": "Gemma 4 31B"
@@ -47,14 +48,6 @@
         "/bin/sh",
         "-lc",
         "GITHUB_PERSONAL_ACCESS_TOKEN=\"$(gh auth token 2>/dev/null)\" exec github-mcp-server stdio"
-      ]
-    },
-    "github-readonly": {
-      "type": "local",
-      "command": [
-        "/bin/sh",
-        "-lc",
-        "GITHUB_PERSONAL_ACCESS_TOKEN=\"$(gh auth token 2>/dev/null)\" exec github-mcp-server stdio --read-only"
       ]
     },
     "context7": {

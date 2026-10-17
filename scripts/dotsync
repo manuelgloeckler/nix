@@ -10,8 +10,35 @@ dotfiles_dir=$1
 remote_setup=$2
 host=$3
 
-# A tar stream needs only SSH and tar on the server; extraction touches only
-# the dedicated dotsync directory, never the server's own configuration.
-tar -C "$dotfiles_dir" -cf - tmux/tmux.conf nvim |
-  ssh -T -- "$host" 'mkdir -p "$HOME/.local/share/dotsync" && tar -C "$HOME/.local/share/dotsync" -xf -'
+# Nix store directories arrive read-only. Never extract into a previous sync:
+# each transfer gets a fresh directory and only a completed transfer is selected.
+tar --no-xattrs -C "$dotfiles_dir" -cf - tmux/tmux.conf nvim |
+  ssh -T -- "$host" '
+    set -eu
+    base="$HOME/.local/share"
+    mkdir -p "$base"
+    stage=$(mktemp -d "$base/.dotsync.XXXXXXXX")
+    trap '\''chmod -R u+w "$stage" 2>/dev/null || true; rm -rf "$stage"'\'' EXIT
+    if tar --help 2>&1 | grep -q -- --delay-directory-restore; then
+      tar --delay-directory-restore -C "$stage" -xf -
+    else
+      tar -C "$stage" -xf -
+    fi
+    current="$base/dotsync-current"
+    if [ -e "$current" ] && [ ! -L "$current" ]; then
+      echo "dotsync: refusing to replace $current" >&2
+      exit 1
+    fi
+    if [ -L "$current" ]; then
+      case $(readlink "$current") in
+        "$base"/.dotsync.*) ;;
+        *) echo "dotsync: refusing to replace foreign link $current" >&2; exit 1 ;;
+      esac
+      if command -v diff >/dev/null 2>&1 && diff -qr "$stage/" "$current/" >/dev/null 2>&1; then
+        exit 0
+      fi
+    fi
+    ln -sfn "$stage" "$current"
+    trap - EXIT
+  '
 ssh -T -- "$host" 'sh -s' < "$remote_setup"
