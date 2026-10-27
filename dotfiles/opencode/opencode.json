@@ -30,13 +30,25 @@
       },
       "models": {
         "Qwen/Qwen3.6-35B-A3B": {
-          "name": "Qwen3.6 35B A3B"
+          "name": "Qwen3.6 35B A3B",
+          "limit": {
+            "context": 1000000,
+            "output": 65536
+          }
         },
         "deepseek-ai/DeepSeek-V4.1-Flash": {
-          "name": "DeepSeek V4.1 Flash"
+          "name": "DeepSeek V4.1 Flash",
+          "limit": {
+            "context": 1000000,
+            "output": 65536
+          }
         },
         "google/gemma-4-31B-it-qat-w4a16-ct": {
-          "name": "Gemma 4 31B"
+          "name": "Gemma 4 31B",
+          "limit": {
+            "context": 1000000,
+            "output": 65536
+          }
         }
       }
     }

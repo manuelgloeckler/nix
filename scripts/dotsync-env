@@ -1,0 +1,134 @@
+#!/bin/sh
+# Bootstrap a minimal, sudo-free toolset on hosts without Nix.
+# Invoked by `dotsync <host> --basic`; safe to re-run.
+set -eu
+
+bindir="$HOME/.local/bin"
+optdir="$HOME/.local/opt"
+mkdir -p "$bindir" "$optdir"
+
+log() { printf 'dotsync-env: %s\n' "$*" >&2; }
+
+if ! command -v curl >/dev/null 2>&1; then
+  log "curl not found; cannot bootstrap this host"
+  exit 1
+fi
+
+os=$(uname -s)
+arch=$(uname -m)
+case "$os:$arch" in
+  Linux:x86_64)
+    rg_arch=x86_64-unknown-linux-musl
+    nvim_arch=nvim-linux-x86_64
+    ts_arch=linux-x64
+    ;;
+  Linux:aarch64|Linux:arm64)
+    rg_arch=aarch64-unknown-linux-musl
+    nvim_arch=nvim-linux-arm64
+    ts_arch=linux-arm64
+    ;;
+  *)
+    log "unsupported platform $os/$arch; skipping basic env setup"
+    exit 0
+    ;;
+esac
+
+download() { curl -fsSL "$1" -o "$2"; }
+
+install_nvim() {
+  if command -v nvim >/dev/null 2>&1; then
+    log "neovim already available: $(nvim --version | head -n 1)"
+    return 0
+  fi
+
+  log "installing neovim"
+  tmp=$(mktemp -d)
+  if ! download "https://github.com/neovim/neovim/releases/latest/download/$nvim_arch.tar.gz" "$tmp/nvim.tar.gz"; then
+    rm -rf "$tmp"
+    log "neovim download failed"
+    return 1
+  fi
+  tar -C "$tmp" -xzf "$tmp/nvim.tar.gz"
+  rm -rf "$optdir/nvim"
+  mv "$tmp/$nvim_arch" "$optdir/nvim"
+  ln -sfn "../opt/nvim/bin/nvim" "$bindir/nvim"
+  rm -rf "$tmp"
+}
+
+install_rg() {
+  if command -v rg >/dev/null 2>&1; then
+    log "ripgrep already available"
+    return 0
+  fi
+
+  version=14.1.1
+  log "installing ripgrep"
+  tmp=$(mktemp -d)
+  if ! download "https://github.com/BurntSushi/ripgrep/releases/download/$version/ripgrep-$version-$rg_arch.tar.gz" "$tmp/rg.tar.gz"; then
+    rm -rf "$tmp"
+    log "ripgrep download failed"
+    return 1
+  fi
+  tar -C "$tmp" -xzf "$tmp/rg.tar.gz"
+  install -m 755 "$tmp/ripgrep-$version-$rg_arch/rg" "$bindir/rg"
+  rm -rf "$tmp"
+}
+
+install_fd() {
+  if command -v fd >/dev/null 2>&1 || command -v fdfind >/dev/null 2>&1; then
+    log "fd already available"
+    return 0
+  fi
+
+  version=10.2.0
+  log "installing fd"
+  tmp=$(mktemp -d)
+  if ! download "https://github.com/sharkdp/fd/releases/download/v$version/fd-v$version-$rg_arch.tar.gz" "$tmp/fd.tar.gz"; then
+    rm -rf "$tmp"
+    log "fd download failed"
+    return 1
+  fi
+  tar -C "$tmp" -xzf "$tmp/fd.tar.gz"
+  install -m 755 "$tmp/fd-v$version-$rg_arch/fd" "$bindir/fd"
+  rm -rf "$tmp"
+}
+
+install_tree_sitter() {
+  if command -v tree-sitter >/dev/null 2>&1; then
+    log "tree-sitter already available"
+    return 0
+  fi
+
+  version=0.26.8
+  log "installing tree-sitter CLI"
+  tmp=$(mktemp -d)
+  if ! download "https://github.com/tree-sitter/tree-sitter/releases/download/v$version/tree-sitter-cli-$ts_arch.zip" "$tmp/ts.zip"; then
+    rm -rf "$tmp"
+    log "tree-sitter download failed"
+    return 1
+  fi
+  if command -v unzip >/dev/null 2>&1; then
+    unzip -q "$tmp/ts.zip" -d "$tmp"
+  elif command -v python3 >/dev/null 2>&1; then
+    python3 -m zipfile -e "$tmp/ts.zip" "$tmp"
+  else
+    rm -rf "$tmp"
+    log "unzip/python3 missing; skipping tree-sitter"
+    return 0
+  fi
+  install -m 755 "$tmp/tree-sitter" "$bindir/tree-sitter"
+  rm -rf "$tmp"
+}
+
+rc=0
+install_nvim || rc=1
+install_rg || rc=1
+install_fd || rc=1
+install_tree_sitter || rc=1
+
+case ":$PATH:" in
+  *":$bindir:"*) ;;
+  *) log "note: add $bindir to PATH to use the installed tools" ;;
+esac
+
+exit "$rc"

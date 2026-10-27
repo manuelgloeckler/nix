@@ -1,18 +1,62 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-if [[ $# -ne 3 ]]; then
-  echo "usage: dotsync <dotfiles-dir> <remote-setup-script> <ssh-host>" >&2
+usage() {
+  echo "usage: dotsync <ssh-host> [--basic]" >&2
   exit 2
+}
+
+# Accept both the older 3-arg layout (no basic-env script) and the current one.
+if [[ $# -ge 4 && -f $3 ]]; then
+  dotfiles_dir=$1
+  remote_setup=$2
+  remote_env=$3
+  host=$4
+  shift 4
+elif [[ $# -ge 3 ]]; then
+  dotfiles_dir=$1
+  remote_setup=$2
+  remote_env=
+  host=$3
+  shift 3
+else
+  usage
 fi
 
-dotfiles_dir=$1
-remote_setup=$2
-host=$3
+basic=false
+for arg in "$@"; do
+  case $arg in
+    --basic) basic=true ;;
+    *) echo "dotsync: unknown option: $arg" >&2; usage ;;
+  esac
+done
+
+# Remember basic hosts so later plain syncs (e.g. the zsh ssh hook) keep the
+# filtered config instead of clobbering it with the full plugin set.
+basic_mode=$basic
+if ! $basic_mode && ssh -T -- "$host" 'test -f "$HOME/.local/share/dotsync-basic"' 2>/dev/null; then
+  basic_mode=true
+fi
 
 # Nix store directories arrive read-only. Never extract into a previous sync:
 # each transfer gets a fresh directory and only a completed transfer is selected.
-tar --no-xattrs -C "$dotfiles_dir" -cf - tmux/tmux.conf nvim |
+# macOS tar turns extended attributes into AppleDouble `._*` members; GNU tar on
+# the remote then extracts them as Lua files and LazyVim tries to load them.
+tar_args=(--no-xattrs --exclude '._*' --exclude '.DS_Store')
+
+# Basic hosts lack the external tooling some plugin specs need (the same set
+# remote-nvim excludes). Leaving them in makes lazy.nvim abort with "Too many
+# rounds of missing plugins" instead of starting a usable editor.
+if $basic_mode; then
+  for path in lazy-lock.json .git LICENSE README.md \
+    lua/plugins/jupyter.lua lua/plugins/copilot.lua lua/plugins/codex.lua \
+    lua/plugins/debug.lua lua/plugins/neotest-python.lua \
+    lua/plugins/leetcode.lua lua/plugins/remote.lua; do
+    tar_args+=(--exclude "nvim/$path")
+  done
+fi
+
+COPYFILE_DISABLE=1 tar "${tar_args[@]}" -C "$dotfiles_dir" -cf - tmux/tmux.conf nvim |
   ssh -T -- "$host" '
     set -eu
     base="$HOME/.local/share"
@@ -41,4 +85,14 @@ tar --no-xattrs -C "$dotfiles_dir" -cf - tmux/tmux.conf nvim |
     ln -sfn "$stage" "$current"
     trap - EXIT
   '
+
+if $basic; then
+  ssh -T -- "$host" 'mkdir -p "$HOME/.local/share" && touch "$HOME/.local/share/dotsync-basic"'
+fi
+
+if $basic && [[ -n $remote_env ]]; then
+  ssh -T -- "$host" 'sh -s' < "$remote_env" ||
+    echo "dotsync: basic env setup failed; syncing config anyway" >&2
+fi
+
 ssh -T -- "$host" 'sh -s' < "$remote_setup"

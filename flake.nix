@@ -3,6 +3,9 @@
 
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixpkgs-unstable";
+    # Pin: last nixpkgs revision with opencode 1.19.3 (v2 bumped Oct 19, 2026).
+    # Used only by the opencodeV1Overlay below; remove once configs are v2-ready.
+    nixpkgs-opencode.url = "github:NixOS/nixpkgs/48571feca7fb156248ed747dab5860467c141768";
     nix-darwin.url = "github:LnL7/nix-darwin/master";
     nix-darwin.inputs.nixpkgs.follows = "nixpkgs";
 
@@ -24,13 +27,19 @@
 
   };
 
-  outputs = inputs@{ self, nix-darwin, nixpkgs, mac-app-util, home-manager, nix-homebrew,
+  outputs = inputs@{ self, nix-darwin, nixpkgs, nixpkgs-opencode, mac-app-util, home-manager, nix-homebrew,
                      homebrew-core, homebrew-cask, homebrew-bundle, homebrew-services,
                      felixkratz-formulae, ... }:
   let
+    # Keep opencode on 1.x (config/skills/commands not yet v2-ready).
+    opencodeV1Overlay = final: prev: {
+      opencode = nixpkgs-opencode.legacyPackages.${prev.stdenv.hostPlatform.system}.opencode;
+    };
+
     configuration = { pkgs, lib, ... }: {
       nixpkgs = {
         hostPlatform = "aarch64-darwin";
+        overlays = [ opencodeV1Overlay ];
         config = {
           allowUnfree = true;
           # Avoid surprising breakages
@@ -68,8 +77,10 @@
         macmon 
         opencode
         claude-code
+        herdr       # terminal multiplexer/runtime for coding agents; nvim integration via herdr-nvim
         texpresso   # live LaTeX renderer; pairs with let-def/texpresso.vim in nvim
         tectonic    # single-binary TeX engine texpresso uses to actually compile (no system TeX needed)
+        eternal-terminal  # et client: ssh sessions that survive sleep/network changes
       ];
 
       # Enable flakes & nix-command
@@ -241,9 +252,28 @@
         ffmpeg
         opencode
         claude-code
+        herdr       # terminal multiplexer/runtime for coding agents; nvim integration via herdr-nvim
         texpresso   # live LaTeX renderer; pairs with let-def/texpresso.vim in nvim
         texlive.combined.scheme-medium   # Linux box has no basictex, give texpresso a real TeX install
+        eternal-terminal  # et client + etserver + etterminal
       ];
+
+      # `et` launches etterminal over a non-interactive ssh command. The box's
+      # non-interactive PATH includes ~/.local/bin but not ~/.nix-profile/bin,
+      # so link the helper where ssh can always find it.
+      home.file.".local/bin/etterminal".source = "${pkgs.eternal-terminal}/bin/etterminal";
+
+      # Single-user server: a user service is enough (etserver supports running
+      # unprivileged). Linger is already enabled on hs-ts, so it survives logout.
+      systemd.user.services.etserver = {
+        Unit.Description = "Eternal Terminal server";
+        Service = {
+          ExecStart = "${pkgs.eternal-terminal}/bin/etserver --port=2022 --logtostdout";
+          Restart = "always";
+          RestartSec = 2;
+        };
+        Install.WantedBy = [ "default.target" ];
+      };
 
       home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
       home.file.".local/bin/ticat-view" = { source = ./scripts/ticat-view; executable = true; };
@@ -251,7 +281,7 @@
       home.file.".local/bin/dotsync" = {
         text = ''
           #!${pkgs.bash}/bin/bash
-          exec ${pkgs.bash}/bin/bash ${./scripts/dotsync} ${./dotfiles} ${./scripts/dotsync-remote} "$@"
+          exec ${pkgs.bash}/bin/bash ${./scripts/dotsync} ${./dotfiles} ${./scripts/dotsync-remote} ${./scripts/dotsync-env} "$@"
         '';
         executable = true;
       };
@@ -272,7 +302,11 @@
       xdg.configFile."opencode/opencode.json".source = ./dotfiles/opencode/opencode.json;
       xdg.configFile."opencode/system-prompt.md".source = ./dotfiles/opencode/system-prompt.md;
       xdg.configFile."opencode/skills".source = ./dotfiles/opencode/skills;
+      xdg.configFile."opencode/commands".source = ./dotfiles/opencode/commands;
       xdg.configFile."opencode/themes".source = ./dotfiles/opencode/themes;
+
+      # Herdr config (keybindings for the nvim sidebar/picker)
+      xdg.configFile."herdr/config.toml".source = ./dotfiles/herdr/config.toml;
 
       home.file.".claude/CLAUDE.md".source = ./dotfiles/claude/CLAUDE.md;
 
@@ -337,6 +371,18 @@
             fi
           done
         done
+      '';
+
+      # Install the herdr-nvim sidebar/file-picker plugin (the nvim-side plugin
+      # only provides annotations). Guard on global state to skip reinstall.
+      home.activation.herdrPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        if command -v herdr >/dev/null 2>&1; then
+          if ! herdr plugin list 2>/dev/null | grep -q 'chmarax\.herdr-nvim'; then
+            echo "Installing herdr-nvim plugin..."
+            herdr plugin install ChmaraX/herdr-nvim --yes 2>/dev/null || \
+              echo "herdr plugin install failed; run: herdr plugin install ChmaraX/herdr-nvim"
+          fi
+        fi
       '';
 
       programs.zsh = {
@@ -436,7 +482,7 @@
               home.file.".local/bin/dotsync" = {
                 text = ''
                   #!${pkgs.bash}/bin/bash
-                  exec ${pkgs.bash}/bin/bash ${./scripts/dotsync} ${./dotfiles} ${./scripts/dotsync-remote} "$@"
+                  exec ${pkgs.bash}/bin/bash ${./scripts/dotsync} ${./dotfiles} ${./scripts/dotsync-remote} ${./scripts/dotsync-env} "$@"
                 '';
                 executable = true;
               };
@@ -465,7 +511,11 @@
               xdg.configFile."opencode/opencode.json".source = ./dotfiles/opencode/opencode.json;
               xdg.configFile."opencode/system-prompt.md".source = ./dotfiles/opencode/system-prompt.md;
               xdg.configFile."opencode/skills".source = ./dotfiles/opencode/skills;
+              xdg.configFile."opencode/commands".source = ./dotfiles/opencode/commands;
               xdg.configFile."opencode/themes".source = ./dotfiles/opencode/themes;
+
+              # Herdr config (keybindings for the nvim sidebar/picker)
+              xdg.configFile."herdr/config.toml".source = ./dotfiles/herdr/config.toml;
 
               # Claude Code config
               home.file.".claude/CLAUDE.md".source = ./dotfiles/claude/CLAUDE.md;
@@ -533,6 +583,19 @@
                 done
               '';
 
+              # Install the herdr-nvim sidebar/file-picker plugin (the nvim-side
+              # plugin installed by nvim/lazy only provides annotations). Global to
+              # the user, so guard on it to avoid reinstalling on every switch.
+              home.activation.herdrPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                if command -v herdr >/dev/null 2>&1; then
+                  if ! herdr plugin list 2>/dev/null | grep -q 'chmarax\.herdr-nvim'; then
+                    echo "Installing herdr-nvim plugin..."
+                    herdr plugin install ChmaraX/herdr-nvim --yes 2>/dev/null || \
+                      echo "herdr plugin install failed; run: herdr plugin install ChmaraX/herdr-nvim"
+                  fi
+                fi
+              '';
+
               programs.zsh = {
                 enable = true;
                 initContent = ''
@@ -581,6 +644,7 @@
           allowUnfree = true;
           allowBroken = false;
         };
+        overlays = [ opencodeV1Overlay ];
       };
 
       modules = [
