@@ -90,7 +90,7 @@ if $basic; then
   ssh -T -- "$host" 'mkdir -p "$HOME/.local/share" && touch "$HOME/.local/share/dotsync-basic"'
 fi
 
-if $basic && [[ -n $remote_env ]]; then
+if { $basic || $basic_mode; } && [[ -n $remote_env ]]; then
   ssh -T -- "$host" 'sh -s' < "$remote_env" ||
     echo "dotsync: basic env setup failed; syncing config anyway" >&2
 fi

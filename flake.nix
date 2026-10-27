@@ -83,6 +83,9 @@
         eternal-terminal  # et client: ssh sessions that survive sleep/network changes
       ];
 
+      # ET sends crash/error reports by default; opt out on the client.
+      environment.variables.ET_NO_TELEMETRY = "1";
+
       # Enable flakes & nix-command
       nix.settings.experimental-features = [ "nix-command" "flakes" ];
 
@@ -225,6 +228,8 @@
 
       targets.genericLinux.enable = true;
       programs.home-manager.enable = true;
+
+      home.sessionVariables.ET_NO_TELEMETRY = "1";
 
       home.packages = with pkgs; [
         git

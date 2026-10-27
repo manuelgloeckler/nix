@@ -3,7 +3,8 @@
 # Keybindings mirror dotfiles/tmux/tmux.conf (prefix C-Space, vim-style hjkl).
 
 [keys]
-# tmux: set -g prefix C-Space (Herdr has a single prefix, so C-b is not a fallback)
+# Herdr owns Ctrl+Space at the outer (Ghostty) layer; tmux inside panes uses C-b.
+# The old Karabiner C-Space -> C-b remap was removed so the real key arrives.
 prefix = "ctrl+space"
 
 # Pane focus: tmux "bind -n M-h/j/k/l select-pane"
