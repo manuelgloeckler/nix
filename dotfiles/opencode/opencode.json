@@ -36,7 +36,7 @@
             "output": 65536
           }
         },
-        "deepseek-ai/DeepSeek-V4.1-Flash": {
+        "deepseek-ai/DeepSeek-V4.1-Flash-1017": {
           "name": "DeepSeek V4.1 Flash",
           "limit": {
             "context": 1000000,

@@ -56,7 +56,8 @@ if $basic_mode; then
   done
 fi
 
-COPYFILE_DISABLE=1 tar "${tar_args[@]}" -C "$dotfiles_dir" -cf - tmux/tmux.conf nvim |
+COPYFILE_DISABLE=1 tar "${tar_args[@]}" -C "$dotfiles_dir" -cf - tmux/tmux.conf nvim bin/herdr-image-pane \
+  opencode/skills/dagr-producer opencode/skills/image-preview opencode/commands/dagr-producer.md ssh/config |
   ssh -T -- "$host" '
     set -eu
     base="$HOME/.local/share"

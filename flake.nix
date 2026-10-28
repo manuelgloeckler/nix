@@ -15,6 +15,9 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
     nix-homebrew.url = "github:zhaofengli-wip/nix-homebrew";
+    # nix-homebrew pins brew 7.0.4, whose cask DSL rejects `zap :not_required`
+    # (used by current font-* casks). 7.0.9+ accepts it.
+    nix-homebrew.inputs.brew-src.url = "github:Homebrew/brew/7.0.11";
 
     # Optional: Declarative tap management
     homebrew-core = { url = "github:homebrew/homebrew-core"; flake = false; };
@@ -60,6 +63,7 @@
         jq 
         imagemagick
         chafa
+        kitty       # only for `kitten icat`: exact-pixel previews through Ghostty's kitty-graphics support
         imagemagick.dev   # ships MagickWand.pc — needed for the magick LuaRock that image.nvim builds against
         pkg-config
         obsidian 
@@ -142,11 +146,22 @@
 
       # Update individual shortcuts rather than replacing the entire shortcut
       # dictionary, then tell macOS to reload them (SystemUIServer alone isn't enough).
+      # Use XML values: the old-style `{ enabled = 0; }` syntax stores strings,
+      # which macOS ignores, so the shortcuts stay active.
       system.activationScripts.postActivation.text = ''
         user_id="$(id -u manug)"
-        launchctl asuser "$user_id" sudo --user=manug -- /usr/bin/defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 36 '{ enabled = 0; }'
-        launchctl asuser "$user_id" sudo --user=manug -- /usr/bin/defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 60 '{ enabled = 0; value = { parameters = (32, 49, 262144); type = standard; }; }'
-        launchctl asuser "$user_id" sudo --user=manug -- /usr/bin/defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add 64 '{ enabled = 0; value = { parameters = (32, 49, 1048576); type = standard; }; }'
+        hotkey() {
+          launchctl asuser "$user_id" sudo --user=manug -- /usr/bin/defaults write com.apple.symbolichotkeys AppleSymbolicHotKeys -dict-add "$1" "$2"
+        }
+        # Disable a Space-based shortcut: hotkey id, modifier mask.
+        disable_space_hotkey() {
+          hotkey "$1" "<dict><key>enabled</key><false/><key>value</key><dict><key>parameters</key><array><integer>32</integer><integer>49</integer><integer>$2</integer></array><key>type</key><string>standard</string></dict></dict>"
+        }
+        hotkey 36 '<dict><key>enabled</key><false/></dict>'
+        # Ctrl+Space / Ctrl+Opt+Space switch input sources; Herdr's prefix needs Ctrl+Space.
+        disable_space_hotkey 60 262144
+        disable_space_hotkey 61 786432
+        disable_space_hotkey 64 1048576
         launchctl asuser "$user_id" sudo --user=manug -- /System/Library/PrivateFrameworks/SystemAdministration.framework/Resources/activateSettings -u
       '';
 
@@ -189,6 +204,7 @@
           "linearmouse"
           "raycast"
           "rectangle"
+          "hammerspoon"     # keyboard focus across displays (dotfiles/hammerspoon)
           "font-jetbrains-mono"
           "font-jetbrains-mono-nerd-font"
           "ghostty"
@@ -282,6 +298,7 @@
 
       home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
       home.file.".local/bin/ticat-view" = { source = ./scripts/ticat-view; executable = true; };
+      home.file.".local/bin/herdr-image-pane" = { source = ./dotfiles/bin/herdr-image-pane; executable = true; };
       home.file.".local/bin/tmux-maybe-preview" = { source = ./scripts/tmux-maybe-preview; executable = true; };
       home.file.".local/bin/dotsync" = {
         text = ''
@@ -310,8 +327,13 @@
       xdg.configFile."opencode/commands".source = ./dotfiles/opencode/commands;
       xdg.configFile."opencode/themes".source = ./dotfiles/opencode/themes;
 
-      # Herdr config (keybindings for the nvim sidebar/picker)
-      xdg.configFile."herdr/config.toml".source = ./dotfiles/herdr/config.toml;
+      # Herdr writes TUI settings (theme, onboarding) back into config.toml, so
+      # install a writable copy rather than a read-only store symlink; nix wins
+      # again on the next switch.
+      home.activation.herdrConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        rm -f "$HOME/.config/herdr/config.toml"
+        ${pkgs.coreutils}/bin/install -Dm0644 ${./dotfiles/herdr/config.toml} "$HOME/.config/herdr/config.toml"
+      '';
 
       home.file.".claude/CLAUDE.md".source = ./dotfiles/claude/CLAUDE.md;
 
@@ -378,14 +400,32 @@
         done
       '';
 
-      # Install the herdr-nvim sidebar/file-picker plugin (the nvim-side plugin
-      # only provides annotations). Guard on global state to skip reinstall.
+      # Install herdr plugins: the nvim sidebar/file-picker (the nvim-side plugin
+      # only provides annotations), the herdr-bar command bar and the herdr-dagr run DAG. All are global
+      # to the user, so guard on them to skip reinstalls.
       home.activation.herdrPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         if command -v herdr >/dev/null 2>&1; then
-          if ! herdr plugin list 2>/dev/null | grep -q 'chmarax\.herdr-nvim'; then
+          if ! herdr plugin list 2>/dev/null | grep -q 'herdr-nvim'; then
             echo "Installing herdr-nvim plugin..."
             herdr plugin install ChmaraX/herdr-nvim --yes 2>/dev/null || \
               echo "herdr plugin install failed; run: herdr plugin install ChmaraX/herdr-nvim"
+          fi
+          if ! herdr plugin list 2>/dev/null | grep -q 'herdr-bar'; then
+            echo "Installing herdr-bar plugin..."
+            herdr plugin install jeffarese/herdr-bar --yes 2>/dev/null || \
+              echo "herdr plugin install failed; run: herdr plugin install jeffarese/herdr-bar"
+          fi
+          if ! herdr plugin list 2>/dev/null | grep -q 'herdr-dagr'; then
+            echo "Installing herdr-dagr plugin..."
+            herdr plugin install aemrebarut/herdr-dagr --yes 2>/dev/null || \
+              echo "herdr plugin install failed; run: herdr plugin install aemrebarut/herdr-dagr"
+          fi
+          # Put dagr on PATH so agents' dagr-producer skill can validate run files;
+          # the plugin root changes on reinstall, so relink every switch.
+          dagr_root="$(herdr plugin list --json 2>/dev/null | ${pkgs.jq}/bin/jq -r '.result.plugins[] | select(.plugin_id == "herdr-dagr") | .plugin_root')"
+          if [ -x "$dagr_root/bin/dagr" ]; then
+            mkdir -p "$HOME/.local/bin"
+            ln -sfn "$dagr_root/bin/dagr" "$HOME/.local/bin/dagr"
           fi
         fi
       '';
@@ -483,6 +523,7 @@
               };
               home.file.".gitconfig".source = ./dotfiles/git/.gitconfig;
               home.file.".local/bin/ticat-view" = { source = ./scripts/ticat-view; executable = true; };
+              home.file.".local/bin/herdr-image-pane" = { source = ./dotfiles/bin/herdr-image-pane; executable = true; };
               home.file.".local/bin/tmux-maybe-preview" = { source = ./scripts/tmux-maybe-preview; executable = true; };
               home.file.".local/bin/dotsync" = {
                 text = ''
@@ -519,10 +560,18 @@
               xdg.configFile."opencode/commands".source = ./dotfiles/opencode/commands;
               xdg.configFile."opencode/themes".source = ./dotfiles/opencode/themes;
 
-              # Herdr config (keybindings for the nvim sidebar/picker)
-              xdg.configFile."herdr/config.toml".source = ./dotfiles/herdr/config.toml;
+              # Herdr writes TUI settings (theme, onboarding) back into
+              # config.toml, so install a writable copy rather than a read-only
+              # store symlink; nix wins again on the next switch.
+              home.activation.herdrConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                rm -f "$HOME/.config/herdr/config.toml"
+                ${pkgs.coreutils}/bin/install -Dm0644 ${./dotfiles/herdr/config.toml} "$HOME/.config/herdr/config.toml"
+              '';
 
               # Claude Code config
+              # Hammerspoon: Hyper+H/L focus the display to the west/east.
+              home.file.".hammerspoon/init.lua".source = ./dotfiles/hammerspoon/init.lua;
+
               home.file.".claude/CLAUDE.md".source = ./dotfiles/claude/CLAUDE.md;
 
               home.activation.claudeCodeConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -588,15 +637,32 @@
                 done
               '';
 
-              # Install the herdr-nvim sidebar/file-picker plugin (the nvim-side
-              # plugin installed by nvim/lazy only provides annotations). Global to
-              # the user, so guard on it to avoid reinstalling on every switch.
+              # Install herdr plugins: nvim sidebar/file-picker (the nvim-side
+              # lazy plugin only provides annotations), herdr-bar command bar and
+              # herdr-dagr run DAG. All are global to the user, so guard to skip reinstalls.
               home.activation.herdrPlugins = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
                 if command -v herdr >/dev/null 2>&1; then
-                  if ! herdr plugin list 2>/dev/null | grep -q 'chmarax\.herdr-nvim'; then
+                  if ! herdr plugin list 2>/dev/null | grep -q 'herdr-nvim'; then
                     echo "Installing herdr-nvim plugin..."
                     herdr plugin install ChmaraX/herdr-nvim --yes 2>/dev/null || \
                       echo "herdr plugin install failed; run: herdr plugin install ChmaraX/herdr-nvim"
+                  fi
+                  if ! herdr plugin list 2>/dev/null | grep -q 'herdr-bar'; then
+                    echo "Installing herdr-bar plugin..."
+                    herdr plugin install jeffarese/herdr-bar --yes 2>/dev/null || \
+                      echo "herdr plugin install failed; run: herdr plugin install jeffarese/herdr-bar"
+                  fi
+                  if ! herdr plugin list 2>/dev/null | grep -q 'herdr-dagr'; then
+                    echo "Installing herdr-dagr plugin..."
+                    herdr plugin install aemrebarut/herdr-dagr --yes 2>/dev/null || \
+                      echo "herdr plugin install failed; run: herdr plugin install aemrebarut/herdr-dagr"
+                  fi
+                  # Put dagr on PATH so agents' dagr-producer skill can validate run files;
+                  # the plugin root changes on reinstall, so relink every switch.
+                  dagr_root="$(herdr plugin list --json 2>/dev/null | ${pkgs.jq}/bin/jq -r '.result.plugins[] | select(.plugin_id == "herdr-dagr") | .plugin_root')"
+                  if [ -x "$dagr_root/bin/dagr" ]; then
+                    mkdir -p "$HOME/.local/bin"
+                    ln -sfn "$dagr_root/bin/dagr" "$HOME/.local/bin/dagr"
                   fi
                 fi
               '';

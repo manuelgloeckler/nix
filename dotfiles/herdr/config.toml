@@ -1,6 +1,11 @@
 # herdr config — https://herdr.dev/docs/configuration/
-# Managed by nix (dotfiles/herdr/config.toml).
+# Managed by nix (dotfiles/herdr/config.toml). Home-manager installs a writable
+# copy, because Herdr's TUI saves settings (theme, onboarding) back into this file.
 # Keybindings mirror dotfiles/tmux/tmux.conf (prefix C-Space, vim-style hjkl).
+
+# First-run notification setup already decided; without this Herdr shows the
+# onboarding wizard and tries to persist the answer.
+onboarding = false
 
 [keys]
 # Herdr owns Ctrl+Space at the outer (Ghostty) layer; tmux inside panes uses C-b.
@@ -44,6 +49,21 @@ key = "prefix+o"
 type = "plugin_action"
 command = "chmarax.herdr-nvim.pick-file"
 description = "open file from agent output"
+
+# herdr-bar: fuzzy command bar over agents, tabs, panes and branches.
+# Cmd+K arrives as ctrl+alt+k, translated by Ghostty (dotfiles/ghostty/config).
+[[keys.command]]
+key = ["prefix+k", "ctrl+alt+k"]
+type = "plugin_action"
+command = "herdr-bar.open"
+description = "command bar"
+
+# herdr-dagr: live DAG of the agent run in a split pane.
+[[keys.command]]
+key = "prefix+a"
+type = "plugin_action"
+command = "herdr-dagr.open-dagr"
+description = "agent run DAG"
 
 # tmux: set -g mouse on / set-clipboard on (Herdr defaults, pinned explicitly)
 [ui]

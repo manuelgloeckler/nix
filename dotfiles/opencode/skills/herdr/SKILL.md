@@ -201,6 +201,28 @@ Use `--format ansi` when colors and terminal styling are evidence. Otherwise use
 
 If a larger recent read still does not reveal the completed response, ask the agent to write it as Markdown in a temporary directory and reply only with the file path, then read that file on the same machine. Use this only as a fallback; do not request file output in the initial prompt.
 
+## Preview an image in another pane
+
+Herdr passes Kitty graphics through to the outer terminal (Ghostty on macOS). Never emit raw image escape sequences into a pane whose output this agent captures; render in a real pane instead.
+
+`herdr-image-pane` handles the layout and sizing: one reusable "images" pane per tab, fitted to that pane's current cell size, and a montage grid for batches:
+
+```bash
+herdr-image-pane /abs/path/plot.png
+herdr-image-pane /abs/path/*.png
+```
+
+It prints the pane ID and render size. If the pane is resized, the next call re-fits automatically.
+
+Only when that helper is unavailable, split a pane yourself and render with chafa:
+
+```bash
+herdr pane split --current --direction right --cwd "$PWD" --no-focus
+herdr pane run <returned-pane-id> "chafa -f kitty -s 80x30 /abs/path/plot.png"
+```
+
+Pass `-f kitty` explicitly: Herdr panes report `TERM=xterm-256color`, so chafa cannot autodetect graphics support. Do not use `kitten icat --place`/`--fit` inside Herdr: it needs the terminal's cell pixel size, and Herdr does not answer that query. Add `--passthrough tmux` only when nested inside tmux, never in a plain Herdr pane. Tell the user which pane shows the preview.
+
 ## Safety and coordination rules
 
 - Use `--no-focus` for background work unless the user asked to switch context.

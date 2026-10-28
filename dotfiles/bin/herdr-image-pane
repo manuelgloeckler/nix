@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+# Show images in a reusable Herdr pane, scaled to that pane's current size.
+# One image renders directly; several become one montage grid.
+# Usage: herdr-image-pane IMAGE...
+set -euo pipefail
+
+die() { echo "herdr-image-pane: $*" >&2; exit 1; }
+
+[[ "${HERDR_ENV:-}" = 1 ]] || die "not inside Herdr (HERDR_ENV != 1)"
+command -v python3 >/dev/null 2>&1 || die "python3 is required"
+(( $# )) || die "usage: herdr-image-pane IMAGE..."
+for img in "$@"; do [[ -f "$img" ]] || die "no such file: $img"; done
+
+pane_field() {
+  python3 -c '
+import json, sys
+panes = json.load(sys.stdin)["result"]["layout"]["panes"]
+pane = next(p for p in panes if p["pane_id"] == sys.argv[1])
+print(pane["rect"][sys.argv[2]])' "$1" "$2"
+}
+
+state_dir="${XDG_CACHE_HOME:-$HOME/.cache}/herdr-image-pane"
+mkdir -p "$state_dir"
+state_file="$state_dir/${HERDR_TAB_ID:-$HERDR_PANE_ID}"
+
+pane=""
+[[ -f "$state_file" ]] && pane="$(<"$state_file")"
+if [[ -n "$pane" ]] && ! herdr pane get "$pane" >/dev/null 2>&1; then pane=""; fi
+
+if [[ -z "$pane" ]]; then
+  direction=down
+  if (( $(herdr pane layout --pane "$HERDR_PANE_ID" | pane_field "$HERDR_PANE_ID" width) >= 120 )); then
+    direction=right
+  fi
+  pane=$(herdr pane split --current --direction "$direction" --cwd "$PWD" --ratio 0.5 --no-focus |
+    python3 -c 'import json, sys; print(json.load(sys.stdin)["result"]["pane"]["pane_id"])')
+  herdr pane rename "$pane" images >/dev/null 2>&1 || true
+  printf '%s' "$pane" >"$state_file"
+fi
+
+layout="$(herdr pane layout --pane "$pane")"
+width=$(($(pane_field "$pane" width <<<"$layout") - 1))
+height=$(($(pane_field "$pane" height <<<"$layout") - 1))
+(( width > 0 && height > 0 )) || die "pane $pane is too small"
+
+target="$1"
+if (( $# > 1 )); then
+  columns=$(python3 -c 'import math, sys; print(min(4, math.ceil(math.sqrt(len(sys.argv) - 1))))' "$@")
+  target="$state_dir/montage-$(date +%s)-$$.png"
+  if command -v magick >/dev/null 2>&1; then
+    magick montage -background none -tile "${columns}x" -geometry '480x360+6+6' "$@" "$target"
+  elif command -v montage >/dev/null 2>&1; then
+    montage -background none -tile "${columns}x" -geometry '480x360+6+6' "$@" "$target"
+  else
+    die "ImageMagick (magick/montage) is required to preview several images at once"
+  fi
+  ls -t "$state_dir"/montage-*.png 2>/dev/null | tail -n +6 | while read -r old; do rm -f "$old"; done
+fi
+
+if command -v chafa >/dev/null 2>&1; then
+  render="chafa -f kitty -s ${width}x${height}"
+elif command -v kitten >/dev/null 2>&1; then
+  # kitten cannot size itself here: Herdr does not answer the terminal's
+  # pixel-size query (CSI 16 t), so --place/--fit would fail.
+  render="kitten icat --transfer-mode=stream --place ${width}x${height}@0x0"
+else
+  die "neither chafa nor kitten is installed"
+fi
+
+printf -v target_q '%q' "$target"
+herdr pane run "$pane" "clear; $render $target_q" >/dev/null
+echo "preview: $pane ${width}x${height} ($# image(s))"

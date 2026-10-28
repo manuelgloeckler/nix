@@ -1,0 +1,97 @@
+# Shared SSH hosts for every machine: the Mac Includes this file, dotsync ships
+# it to remotes and Includes it from their ~/.ssh/config. No secrets here: the
+# Mac adds its key files in ~/.ssh/config; other machines use the
+# forwarded agent, and *-ts hosts also accept Tailscale SSH.
+
+# Reuse authenticated session for galvani/ferranti so 2FA is only prompted
+# once per ControlPersist window. Socket lives in ~/.ssh/cm.
+Host galvani* ferranti* mlc-*
+    ControlMaster auto
+    ControlPath ~/.ssh/cm/%C
+    ControlPersist yes
+
+Host galvani1
+    HostName 134.2.168.43
+    User mgloeckler90
+    ForwardAgent yes
+    SetEnv TERM=ansi
+
+Host galvani2
+    HostName 134.2.168.114
+    User mgloeckler90
+    ForwardAgent yes
+    SetEnv TERM=ansi
+
+Host ferranti1
+    HostName 134.2.168.202
+    User mgloeckler90
+    ForwardAgent yes
+    SetEnv TERM=ansi
+
+Host ferranti2
+    HostName 134.2.168.205
+    User mgloeckler90
+    ForwardAgent yes
+    SetEnv TERM=ansi
+
+Host mlc-galvani-a100
+    User mgloeckler90
+    ProxyCommand ssh galvani2 "sh /mnt/lustre/work/macke/mgloeckler90/vscode/run_allocate-galvani-a100.sh"
+    StrictHostKeyChecking no
+    ForwardAgent yes
+    SetEnv TERM=ansi
+
+Host mlc-ferranti-h100
+    User mgloeckler90
+    ProxyCommand ssh ferranti1 "sh /home/macke/mgloeckler90/vscode/run_allocate-ferranti-h100.sh"
+    StrictHostKeyChecking no
+    SetEnv TERM=ansi
+
+Host mlc-ferranti-h100_2
+    User mgloeckler90
+    ProxyCommand ssh ferranti2 "sh /home/macke/mgloeckler90/vscode/run_allocate-ferranti-h100_2.sh"
+    StrictHostKeyChecking no
+    SetEnv TERM=ansi
+
+Host ws
+    HostName 134.2.174.162
+    User manuel
+    SetEnv TERM=ansi
+    ForwardAgent yes
+
+# Tailscale devices. WireGuard already authenticates tailnet peers, so a
+# first-seen host key is safe to record; a changed key is still refused.
+Host *-ts
+    StrictHostKeyChecking accept-new
+
+Host ws-ts
+    HostName fedora.tail30e3e7.ts.net
+    User manuel
+    SetEnv TERM=ansi
+    ForwardAgent yes
+
+Host ws2-ts
+    HostName fedora-1.tail30e3e7.ts.net
+    User manuel
+    SetEnv TERM=ansi
+    ForwardAgent yes
+
+Host galvani-ts
+    HostName galvani-login2.tail30e3e7.ts.net
+    User mgloeckler90
+    ForwardAgent yes
+    SetEnv TERM=ansi
+
+Host ferranti-ts
+    HostName ferranti-login001.tail30e3e7.ts.net
+    User mgloeckler90
+    ForwardAgent yes
+    SetEnv TERM=ansi
+
+Host muse-ts
+    HostName muse.tail30e3e7.ts.net
+
+Host hs-ts
+    HostName 100.78.139.70
+    User manug
+    ForwardAgent yes

@@ -36,13 +36,19 @@ window-step-resize = true
 
 # --- Tabs, splits, tmux-ish navigation ---------------------------------------
 
+# Left Option sends Alt (Herdr's alt+hjkl pane focus); right Option keeps
+# typing QWERTZ characters like @ [ ] { } |.
+macos-option-as-alt = left
+
 keybind = ctrl+n=new_window
 
 # Split nav (vim: <C-w>h/j/k/l). Ctrl+hjkl = move between panes.
-keybind = ctrl+h=goto_split:left
-keybind = ctrl+j=goto_split:bottom
-keybind = ctrl+k=goto_split:top
-keybind = ctrl+l=goto_split:right
+# performable: only when a Ghostty split exists there; otherwise the key
+# reaches the app (Herdr, nvim, ctrl+l clear).
+keybind = performable:ctrl+h=goto_split:left
+keybind = performable:ctrl+j=goto_split:bottom
+keybind = performable:ctrl+k=goto_split:top
+keybind = performable:ctrl+l=goto_split:right
 
 # Tab nav (vim: gT / gt, tmux: prefix+p/n). Ctrl+Shift+h/l = prev/next tab.
 # Rationale: Ctrl+hjkl already moves between splits; adding Shift keeps the
@@ -55,6 +61,10 @@ keybind = ctrl+shift+l=next_tab
 # ghostty — intentional trade for two-finger tab nav).
 keybind = super+h=previous_tab
 keybind = super+l=next_tab
+
+# herdr-bar command bar: Cmd+K is never delivered to terminal apps, so send the
+# CSI-u form of ctrl+alt+k (replaces Ghostty's default Cmd+K clear-scrollback).
+keybind = cmd+k=text:\x1b[107;7u
 # Close current split/tab/window (context-aware)
 keybind = ctrl+w=close_surface
 keybind = ctrl+a>t=close_tab

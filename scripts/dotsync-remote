@@ -31,6 +31,109 @@ for config in dotsync-nvim nvim; do
   fi
 done
 
+# Shared SSH hosts so every machine can reach every other one (keys stay on
+# their machines; see dotfiles/ssh/config). ssh keeps the first value it finds,
+# so the Include goes at the top, ahead of the host's own entries.
+ssh_config="$HOME/.ssh/config"
+ssh_include="Include $managed/ssh/config"
+mkdir -p "$HOME/.ssh/cm"
+chmod 700 "$HOME/.ssh" "$HOME/.ssh/cm"
+if ! grep -Fxq "$ssh_include" "$ssh_config" 2>/dev/null; then
+  { printf '# dotsync shared hosts\n%s\n\n' "$ssh_include"; cat "$ssh_config" 2>/dev/null || true; } > "$ssh_config.dotsync"
+  chmod 600 "$ssh_config.dotsync"
+  mv "$ssh_config.dotsync" "$ssh_config"
+fi
+
+# Agent skills for Claude Code and OpenCode. Link rather than copy so later
+# syncs update them, but never replace a skill the host already has.
+for dir in "$HOME/.claude/skills" "$HOME/.config/opencode/skills"; do
+  for skill in dagr-producer image-preview; do
+    target="$dir/$skill"
+    if [ ! -e "$target" ] || [ -L "$target" ]; then
+      mkdir -p "$dir"
+      ln -sfn "$managed/opencode/skills/$skill" "$target"
+    fi
+  done
+done
+
+# Helper behind the image-preview skill. Needs chafa (and ImageMagick for
+# batches) on the host; the Herdr server's PATH may lack ~/.local/bin.
+mkdir -p "$HOME/.local/bin"
+helper_target="$HOME/.local/bin/herdr-image-pane"
+if [ ! -e "$helper_target" ] || [ -L "$helper_target" ]; then
+  ln -sfn "$managed/bin/herdr-image-pane" "$helper_target"
+  chmod +x "$managed/bin/herdr-image-pane" 2>/dev/null || true
+fi
+
+# OpenCode has no slash entry for skills; this command loads the skill.
+command_target="$HOME/.config/opencode/commands/dagr-producer.md"
+if [ ! -e "$command_target" ] || [ -L "$command_target" ]; then
+  mkdir -p "$HOME/.config/opencode/commands"
+  ln -sfn "$managed/opencode/commands/dagr-producer.md" "$command_target"
+fi
+
+# Herdr plugins run on the machine that owns the workspace, so each host needs
+# its own install. Pin release tags: only those ship prebuilt binaries, and
+# hosts lack Cargo.
+herdr_bin=$(command -v herdr 2>/dev/null || echo "$HOME/.local/bin/herdr")
+herdr_config="$HOME/.config/herdr/config.toml"
+config_changed=false
+
+# Install a GitHub plugin: plugin id, repo, release tag.
+install_herdr_plugin() {
+  if ! "$herdr_bin" plugin list 2>/dev/null | grep -q "$1"; then
+    "$herdr_bin" plugin install "$2" --ref "$3" --yes >/dev/null 2>&1 ||
+      echo "dotsync: $1 install failed; run: herdr plugin install $2 --ref $3" >&2
+  fi
+}
+
+# Custom keybindings come from the server that owns the workspace, so the
+# Mac's bindings must also live in this host's config: key, action, description.
+bind_herdr_action() {
+  if ! grep -q "key = \"$1\"" "$herdr_config" 2>/dev/null ||
+     ! grep -q "command = \"$2\"" "$herdr_config" 2>/dev/null; then
+    mkdir -p "$HOME/.config/herdr"
+    printf '\n# %s (synced by dotsync).\n[[keys.command]]\nkey = "%s"\ntype = "plugin_action"\ncommand = "%s"\ndescription = "%s"\n' \
+      "$3" "$1" "$2" "$3" >> "$herdr_config"
+    config_changed=true
+  fi
+}
+
+if [ -x "$herdr_bin" ]; then
+  # herdr-dagr renders the run file the dagr-producer skill writes.
+  install_herdr_plugin herdr-dagr aemrebarut/herdr-dagr v0.3.1
+  bind_herdr_action prefix+a herdr-dagr.open-dagr "agent run DAG"
+
+  # herdr-nvim: nvim sidebar and file picker; the nvim half syncs with nvim/.
+  install_herdr_plugin herdr-nvim ChmaraX/herdr-nvim v1.2.2
+  bind_herdr_action prefix+e chmarax.herdr-nvim.toggle "nvim sidebar"
+  bind_herdr_action prefix+o chmarax.herdr-nvim.pick-file "open file from agent output"
+  # The sidebar spawns nvim from the Herdr server's PATH, which may lack
+  # ~/.local/bin (where dotsync-env installs nvim), so pin the absolute path.
+  herdr_nvim_config="$HOME/.config/herdr-nvim/config.toml"
+  nvim_bin=$(command -v nvim 2>/dev/null || echo "$HOME/.local/bin/nvim")
+  if [ ! -e "$herdr_nvim_config" ] && [ -x "$nvim_bin" ]; then
+    mkdir -p "$HOME/.config/herdr-nvim"
+    printf '# Synced by dotsync.\n[sidebar]\nnvim_bin = "%s"\n' "$nvim_bin" > "$herdr_nvim_config"
+  fi
+
+  # herdr-bar: fuzzy command bar; the Mac sends Cmd+K as ctrl+alt+k.
+  install_herdr_plugin herdr-bar jeffarese/herdr-bar v0.12.0
+  bind_herdr_action prefix+k herdr-bar.open "command bar"
+  bind_herdr_action ctrl+alt+k herdr-bar.open "command bar"
+
+  if $config_changed; then
+    "$herdr_bin" server reload-config >/dev/null 2>&1 || true
+  fi
+
+  # The skill validates with `dagr`; the plugin root changes on reinstall.
+  dagr_bin=$(ls -d "$HOME"/.config/herdr/plugins/github-installations/herdr-dagr-*/*/checkout/bin/dagr 2>/dev/null | tail -n 1)
+  if [ -n "$dagr_bin" ]; then
+    mkdir -p "$HOME/.local/bin"
+    ln -sfn "$dagr_bin" "$HOME/.local/bin/dagr"
+  fi
+fi
+
 if command -v tmux >/dev/null 2>&1; then
   tmux source-file "$tmux_config" 2>/dev/null || true
 fi
