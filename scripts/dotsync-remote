@@ -72,6 +72,28 @@ if [ ! -e "$command_target" ] || [ -L "$command_target" ]; then
   ln -sfn "$managed/opencode/commands/dagr-producer.md" "$command_target"
 fi
 
+# pi coding agent: same ML Cloud models and skills as OpenCode. Hosts lack
+# nix, so install the pinned npm release into ~/.local once.
+if ! command -v pi >/dev/null 2>&1 && [ ! -x "$HOME/.local/bin/pi" ] && command -v npm >/dev/null 2>&1; then
+  npm install -g --prefix "$HOME/.local" @earendil-works/pi-coding-agent@1.4.0 >/dev/null 2>&1 ||
+    echo "dotsync: pi install failed; run: npm install -g --prefix ~/.local @earendil-works/pi-coding-agent@1.4.0" >&2
+fi
+mkdir -p "$HOME/.pi/agent"
+models_target="$HOME/.pi/agent/models.json"
+if [ ! -e "$models_target" ] || [ -L "$models_target" ]; then
+  ln -sfn "$managed/pi/models.json" "$models_target"
+fi
+# pi writes settings.json from /settings, so seed a copy instead of linking.
+[ -e "$HOME/.pi/agent/settings.json" ] || cp "$managed/pi/settings.json" "$HOME/.pi/agent/settings.json"
+# models.json reads the key from this file; hosts that logged in through
+# OpenCode keep it only in OpenCode's auth store.
+mlcloud_key="$HOME/.config/opencode/mlcloud.key"
+opencode_auth="$HOME/.local/share/opencode/auth.json"
+if [ ! -s "$mlcloud_key" ] && [ -f "$opencode_auth" ]; then
+  (umask 077; python3 -c 'import json, sys; print(json.load(open(sys.argv[1]))["mlcloud"]["key"])' "$opencode_auth" > "$mlcloud_key" 2>/dev/null) ||
+    rm -f "$mlcloud_key"
+fi
+
 # Herdr plugins run on the machine that owns the workspace, so each host needs
 # its own install. Pin release tags: only those ship prebuilt binaries, and
 # hosts lack Cargo.

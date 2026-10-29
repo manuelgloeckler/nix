@@ -61,8 +61,13 @@ Host ws
 
 # Tailscale devices. WireGuard already authenticates tailnet peers, so a
 # first-seen host key is safe to record; a changed key is still refused.
+# Probes keep *-ts links from going silent: without them an idle tailnet
+# connection stalls until Herdr's health check times out ("connection was
+# lost" every ~15-45 min, then a slow reconnect).
 Host *-ts
     StrictHostKeyChecking accept-new
+    ServerAliveInterval 30
+    ServerAliveCountMax 3
 
 Host ws-ts
     HostName fedora.tail30e3e7.ts.net

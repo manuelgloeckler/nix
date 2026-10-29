@@ -81,6 +81,7 @@
         macmon 
         opencode
         claude-code
+        pi-coding-agent  # pi coding agent; config in dotfiles/pi
         herdr       # terminal multiplexer/runtime for coding agents; nvim integration via herdr-nvim
         texpresso   # live LaTeX renderer; pairs with let-def/texpresso.vim in nvim
         tectonic    # single-binary TeX engine texpresso uses to actually compile (no system TeX needed)
@@ -273,6 +274,7 @@
         ffmpeg
         opencode
         claude-code
+        pi-coding-agent  # pi coding agent; config in dotfiles/pi
         herdr       # terminal multiplexer/runtime for coding agents; nvim integration via herdr-nvim
         texpresso   # live LaTeX renderer; pairs with let-def/texpresso.vim in nvim
         texlive.combined.scheme-medium   # Linux box has no basictex, give texpresso a real TeX install
@@ -326,6 +328,15 @@
       xdg.configFile."opencode/skills".source = ./dotfiles/opencode/skills;
       xdg.configFile."opencode/commands".source = ./dotfiles/opencode/commands;
       xdg.configFile."opencode/themes".source = ./dotfiles/opencode/themes;
+
+      # pi: models, MCP servers and skills mirror OpenCode. /settings writes
+      # settings.json, so install a writable copy; nix wins on the next switch.
+      home.file.".pi/agent/models.json".source = ./dotfiles/pi/models.json;
+      home.file.".pi/agent/mcp.json".source = ./dotfiles/pi/mcp.json;
+      home.file.".pi/agent/APPEND_SYSTEM.md".source = ./dotfiles/opencode/system-prompt.md;
+      home.activation.piSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        ${pkgs.coreutils}/bin/install -Dm0644 ${./dotfiles/pi/settings.json} "$HOME/.pi/agent/settings.json"
+      '';
 
       # Herdr writes TUI settings (theme, onboarding) back into config.toml, so
       # install a writable copy rather than a read-only store symlink; nix wins
@@ -559,6 +570,15 @@
               xdg.configFile."opencode/skills".source = ./dotfiles/opencode/skills;
               xdg.configFile."opencode/commands".source = ./dotfiles/opencode/commands;
               xdg.configFile."opencode/themes".source = ./dotfiles/opencode/themes;
+
+              # pi: models, MCP servers and skills mirror OpenCode. /settings writes
+              # settings.json, so install a writable copy; nix wins on the next switch.
+              home.file.".pi/agent/models.json".source = ./dotfiles/pi/models.json;
+              home.file.".pi/agent/mcp.json".source = ./dotfiles/pi/mcp.json;
+              home.file.".pi/agent/APPEND_SYSTEM.md".source = ./dotfiles/opencode/system-prompt.md;
+              home.activation.piSettings = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+                ${pkgs.coreutils}/bin/install -Dm0644 ${./dotfiles/pi/settings.json} "$HOME/.pi/agent/settings.json"
+              '';
 
               # Herdr writes TUI settings (theme, onboarding) back into
               # config.toml, so install a writable copy rather than a read-only

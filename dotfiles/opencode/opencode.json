@@ -14,11 +14,9 @@
     "codesearch": true
   },
   "permission": {
+    "*": "allow",
     "external_directory": "allow",
-    "bash": "allow",
-    "webfetch": "allow",
-    "websearch": "allow",
-    "codesearch": "allow"
+    "doom_loop": "allow"
   },
   "provider": {
     "mlcloud": {

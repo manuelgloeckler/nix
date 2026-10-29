@@ -1,0 +1,41 @@
+{
+  "$schema": "https://pi.dev/schemas/models.schema.json",
+  "providers": {
+    "mlcloud": {
+      "name": "ML Cloud",
+      "baseUrl": "https://llm.mlcloud.uni-tuebingen.de/v1",
+      "api": "openai-completions",
+      "apiKey": "!cat ~/.config/opencode/mlcloud.key",
+      "models": [
+        {
+          "id": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+          "name": "DeepSeek V4.1 Flash",
+          "reasoning": true,
+          "contextWindow": 1000000,
+          "maxTokens": 65536,
+          "thinkingLevelMap": {
+            "minimal": "low",
+            "low": "low",
+            "medium": "high",
+            "high": "high",
+            "xhigh": "xhigh",
+            "max": "max"
+          }
+        },
+        {
+          "id": "Qwen/Qwen3.6-35B-A3B",
+          "name": "Qwen3.6 35B A3B",
+          "reasoning": true,
+          "contextWindow": 1000000,
+          "maxTokens": 65536
+        },
+        {
+          "id": "google/gemma-4-31B-it-qat-w4a16-ct",
+          "name": "Gemma 4 31B",
+          "contextWindow": 1000000,
+          "maxTokens": 65536
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "mcpServers": {
+    "github": {
+      "command": "/bin/sh",
+      "args": [
+        "-lc",
+        "GITHUB_PERSONAL_ACCESS_TOKEN=\"$(gh auth token 2>/dev/null)\" exec github-mcp-server stdio"
+      ]
+    },
+    "context7": {
+      "url": "https://mcp.context7.com/mcp"
+    },
+    "grep": {
+      "url": "https://mcp.grep.app"
+    },
+    "uv-mcp": {
+      "command": "~/.local/bin/uv-mcp"
+    },
+    "agenthome": {
+      "command": "/bin/sh",
+      "args": [
+        "-c",
+        "AGENTHOME_TOKEN_FILE=\"$HOME/.agenthome/mcp/opencode.token\" exec ah mcp"
+      ],
+      "env": {
+        "AGENTHOME_HUB": "https://cockpit.tail30e3e7.ts.net:8443"
+      }
+    }
+  }
+}

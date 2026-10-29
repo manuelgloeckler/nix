@@ -1,0 +1,7 @@
+{
+  "$schema": "https://pi.dev/schemas/settings.schema.json",
+  "defaultProvider": "mlcloud",
+  "defaultModel": "deepseek-ai/DeepSeek-V4.1-Flash-1017",
+  "defaultProjectTrust": "always",
+  "skills": ["~/.config/opencode/skills"]
+}
